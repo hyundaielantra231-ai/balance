@@ -1777,6 +1777,49 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');
   });
 }
+  /* ===== ЛОГИКА ЭКСПОРТА / ИМПОРТА ===== */
+// Делаем методы read/write публичными для импорта
+const StoragePublic = window.Storage || {}; 
+
+function exportData() {
+  const db = Storage.listEntries();
+  if (!db.length) { UI.showToast('Нет данных для экспорта', 'warn'); return; }
+  
+  const backup = { app: 'balance-pwa', version: '2.0', exportedAt: new Date().toISOString(), months: {} };
+  db.forEach(entry => { backup.months[entry.key] = entry.data; });
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `balance-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  UI.showToast('Резервная копия скачана');
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const json = JSON.parse(e.target.result);
+      if (!json.months) throw new Error('Неверный формат');
+      
+      // Восстанавливаем данные
+      const currentDb = Storage.read(); 
+      Object.assign(currentDb.months, json.months);
+      Storage.write(currentDb);
+      
+      UI.showToast('Данные восстановлены!');
+      History.render(); // Обновляем экран
+    } catch (err) { UI.showToast('Ошибка: ' + err.message, 'err'); }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('btnExport').addEventListener('click', exportData);
+document.getElementById('fileImport').addEventListener('change', (e) => {
+  if (e.target.files.length > 0) { importData(e.target.files[0]); e.target.value = ''; }
+});
 </script>
 </body>
 </html>
