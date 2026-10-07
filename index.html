@@ -22,6 +22,7 @@ html, body { background: #05070c; height: 100%; overflow: hidden; }
 input, select, textarea { appearance: none; color-scheme: dark; font-size: 16px !important; -webkit-text-size-adjust: 100%; }
 button, [role="button"], input, select, label { touch-action: manipulation; }
 button { -webkit-user-select: none; user-select: none; }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
 .thin-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.12) transparent; }
 .thin-scroll::-webkit-scrollbar { width:4px; }
 .thin-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius:99px; }
@@ -35,6 +36,8 @@ button { -webkit-user-select: none; user-select: none; }
 .row-in { animation: rowIn .3s var(--ease) both; }
 @keyframes rowOut { to { opacity:0; transform:scale(.94); } }
 .row-out { animation: rowOut .18s ease forwards; }
+@keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(52,211,153,.6); } 50% { box-shadow:0 0 0 6px rgba(52,211,153,0); } }
+.row-pulse { animation: pulse .8s ease-in-out 2; border-color: rgba(52,211,153,.55) !important; }
 .sheet-panel { transform: translateY(115%); transition: transform .3s var(--ease); }
 .sheet-open { transform: none; }
 @keyframes flash { 0% { box-shadow:0 0 0 0 rgba(52,211,153,.35); } 100% { box-shadow:0 0 0 20px rgba(52,211,153,0); } }
@@ -49,15 +52,15 @@ button { -webkit-user-select: none; user-select: none; }
 <div class="glow glow-b" aria-hidden="true"></div>
 
 <div class="relative z-10 flex h-full w-full flex-col bg-[#0a0e16] anim-rise">
-  
-  <!-- Верхняя панель с часами -->
+
+  <div id="toast" class="pointer-events-none absolute left-1/2 top-14 z-[70] -translate-x-1/2 -translate-y-2 whitespace-nowrap rounded-full border border-emerald-300/30 bg-[#0e1522]/95 px-4 py-2 text-xs font-bold text-emerald-300 opacity-0 shadow-xl shadow-black/40 transition-all duration-300"></div>
+
   <div class="flex shrink-0 items-center justify-between px-7 pt-3.5 text-[12px] font-semibold text-slate-300" style="padding-top:calc(env(safe-area-inset-top) + 10px);">
     <span id="clock" class="tracking-wide">--:--</span>
   </div>
 
-  <!-- Область прокрутки контента -->
   <div id="appScroll" class="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-28 pt-4">
-    
+
     <!-- ЭКРАН: БЮДЖЕТ -->
     <div id="screenEditor">
       <header class="mb-4">
@@ -92,14 +95,12 @@ button { -webkit-user-select: none; user-select: none; }
       <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Ввод данных</p>
       <p class="mb-4 text-[10px] leading-relaxed text-slate-600"><i class="fa-solid fa-repeat mr-1 text-emerald-300/60"></i>Отметьте «каждый месяц» — запись повторится в следующих месяцах</p>
 
-      <!-- Секции ввода (Доходы, Кредиты, Семья, ЖКХ, Иные) -->
       <section><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-sack-dollar text-sm"></i></span><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Доходы</h2></div><span id="sumIncomes" class="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold text-emerald-300">0 ₽</span></div><div id="emptyIncomes" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Пока пусто — добавьте первый источник дохода</div><div id="listIncomes" class="space-y-2"></div><button type="button" data-section="incomes" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить доход</button></section>
       <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-rose-400/10 text-rose-300"><i class="fa-solid fa-hand-holding-dollar text-sm"></i></span><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Кредиты</h2></div><span id="sumCredits" class="rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-[11px] font-bold text-rose-300">0 ₽</span></div><div id="emptyCredits" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Кредитов нет — и это прекрасно</div><div id="listCredits" class="space-y-2"></div><button type="button" data-section="credits" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-rose-300/25 py-2.5 text-[13px] font-semibold text-rose-300/90 transition hover:bg-rose-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить кредит</button></section>
       <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-graduation-cap text-sm"></i></span><div><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Семья и обучение</h2><p class="text-[10px] font-medium text-slate-600">садик, курсы и свои категории</p></div></div><span id="sumFamily" class="rounded-full border border-sky-300/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-bold text-sky-300">0 ₽</span></div><div id="emptyFamily" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте расход и выберите для него иконку</div><div id="listFamily" class="space-y-2"></div><button type="button" data-section="family" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-sky-300/25 py-2.5 text-[13px] font-semibold text-sky-300/90 transition hover:bg-sky-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить расход</button></section>
       <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-amber-300/10 text-amber-300"><i class="fa-solid fa-bolt text-sm"></i></span><div><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Коммунальные услуги</h2><p class="text-[10px] font-medium text-slate-600">услуга + объект недвижимости</p></div></div><span id="sumUtils" class="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">0 ₽</span></div><div id="emptyUtils" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте услугу и укажите недвижимость</div><div id="listUtils" class="space-y-2"></div><button type="button" data-section="utils" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-amber-300/25 py-2.5 text-[13px] font-semibold text-amber-300/90 transition hover:bg-amber-300/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить услугу</button></section>
       <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-shapes text-sm"></i></span><div><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Иные</h2><p class="text-[10px] font-medium text-slate-600">любой расход со своим названием и иконкой</p></div></div><span id="sumOther" class="rounded-full border border-violet-300/20 bg-violet-400/10 px-2.5 py-1 text-[11px] font-bold text-violet-300">0 ₽</span></div><div id="emptyOther" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте расход, который не подошёл к другим категориям</div><div id="listOther" class="space-y-2"></div><button type="button" data-section="other" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-violet-300/25 py-2.5 text-[13px] font-semibold text-violet-300/90 transition hover:bg-violet-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить пункт</button></section>
 
-      <!-- Сводка месяца -->
       <section id="resultCard" class="mt-7">
         <div class="rounded-[26px] bg-gradient-to-br from-emerald-400/50 via-white/10 to-rose-400/40 p-[1.5px] shadow-xl shadow-black/40">
           <div class="rounded-[24.5px] bg-[#101522] px-5 py-5">
@@ -141,56 +142,69 @@ button { -webkit-user-select: none; user-select: none; }
       <div class="mt-5"><div class="flex items-center justify-between gap-2"><p id="calDetailsTitle" class="font-display text-sm font-bold">—</p><div class="flex shrink-0 items-center gap-1.5"><div id="calDetailsTotals" class="flex items-center gap-1.5"></div><button id="calCopyDay" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:border-emerald-300/30 hover:text-emerald-300 active:scale-90"><i class="fa-solid fa-copy text-xs"></i></button></div></div><div id="calDetailsList" class="mt-2 space-y-2"></div></div>
     </div>
 
-    <!-- ЭКРАН: ИТОГИ (ИСПРАВЛЕННАЯ ВЕРСТКА) -->
-    <div id="screenHistory" class="hidden pb-24">
+    <!-- ЭКРАН: ИТОГИ -->
+    <div id="screenHistory" class="hidden">
       <header class="mb-4"><p class="text-[11px] font-bold uppercase tracking-[0.28em] text-sky-300/90">Итоги за период</p><h2 class="mt-1 font-display text-[24px] font-bold">Итоги</h2><p class="mt-1 text-sm text-slate-400">Сохранённые месяцы и сводка за выбранный период.</p></header>
-      
       <div class="mb-3 grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
         <button data-period="all" class="period-chip rounded-xl bg-white/[0.06] py-2 text-[10px] font-bold text-emerald-300 transition">Всё время</button>
         <button data-period="year" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">Год</button>
         <button data-period="6m" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">6 мес</button>
         <button data-period="3m" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">3 мес</button>
       </div>
-      
       <p id="periodCount" class="mb-2 text-[10px] font-medium text-slate-600"></p>
-      
-      <div id="periodStats" class="grid grid-cols-3 gap-2 mb-6">
+      <div id="periodStats" class="mb-6 grid grid-cols-3 gap-2">
         <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доходы за период</p><p id="pIncome" class="mt-1 text-[13px] font-extrabold text-emerald-300">—</p></div>
         <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расходы за период</p><p id="pExpenses" class="mt-1 text-[13px] font-extrabold text-rose-300">—</p></div>
         <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Средняя нагрузка</p><p id="pLoad" class="mt-1 text-[13px] font-extrabold text-amber-300">—</p></div>
       </div>
-
-      <!-- РЕЗЕРВНОЕ КОПИРОВАНИЕ -->
-      <div class="mb-6 border-t border-white/10 pt-6">
-        <p class="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"><i class="fa-solid fa-shield-halved mr-1"></i> Резервное копирование</p>
-        <div class="grid grid-cols-2 gap-3">
-          <button id="btnExport" type="button" class="rounded-2xl border border-emerald-300/20 bg-emerald-400/5 py-3 text-xs font-bold text-emerald-300 transition hover:bg-emerald-400/10 active:scale-95"><i class="fa-solid fa-download mr-1.5"></i> Скачать JSON</button>
-          <label for="fileImport" class="cursor-pointer rounded-2xl border border-sky-300/20 bg-sky-400/5 py-3 text-center text-xs font-bold text-sky-300 transition hover:bg-sky-400/10 active:scale-95"><i class="fa-solid fa-upload mr-1.5"></i> Загрузить JSON</label>
-          <input type="file" id="fileImport" accept=".json" class="hidden">
-        </div>
-        <p class="mt-3 text-center text-[9px] leading-relaxed text-slate-600">Скачайте файл для хранения.<br>При переустановке загрузите его обратно.</p>
-      </div>
-
       <div id="historyList" class="space-y-3"></div>
       <div id="historyEmpty" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center"><i class="fa-solid fa-box-archive mb-2 text-xl text-slate-600"></i><p class="text-xs leading-relaxed text-slate-500">Нет сохранённых месяцев за выбранный период.<br>Нажмите «Сохранить месяц» в редакторе — и он появится здесь.</p></div>
+
+      <!-- РЕЗЕРВНОЕ КОПИРОВАНИЕ — В САМОМ НИЗУ -->
+      <div class="mt-8 border-t border-white/10 pb-4 pt-6">
+        <p class="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"><i class="fa-solid fa-shield-halved mr-1"></i> Резервное копирование</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btnExport" type="button" class="rounded-2xl border border-emerald-300/20 bg-emerald-400/5 py-3 text-xs font-bold text-emerald-300 transition hover:bg-emerald-400/10 active:scale-95"><i class="fa-solid fa-download mr-1.5"></i> Скачать копию</button>
+          <label for="fileImport" class="cursor-pointer rounded-2xl border border-sky-300/20 bg-sky-400/5 py-3 text-center text-xs font-bold text-sky-300 transition hover:bg-sky-400/10 active:scale-95"><i class="fa-solid fa-upload mr-1.5"></i> Загрузить копию</label>
+          <input type="file" id="fileImport" accept=".json" class="hidden">
+        </div>
+        <p class="mt-3 text-center text-[9px] leading-relaxed text-slate-600">Скачайте файл копии для хранения.<br>При переустановке приложения загрузите его обратно.</p>
+      </div>
     </div>
 
   </div>
 
   <!-- ТАБ-БАР (ЗАФИКСИРОВАН ВНИЗУ) -->
-  <nav class="fixed bottom-0 left-0 right-0 z-50 flex shrink-0 border-t border-white/10 bg-[#0c111c]/95 backdrop-blur safe-area-pb">
+  <nav class="safe-area-pb fixed bottom-0 left-0 right-0 z-50 flex border-t border-white/10 bg-[#0c111c]/95 backdrop-blur">
     <button id="tabBudget" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-emerald-300 transition"><span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300"></span><i class="fa-solid fa-pen-to-square"></i>Бюджет</button>
     <button id="tabCalendar" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-slate-500 transition"><span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300 opacity-0"></span><i class="fa-solid fa-calendar-days"></i>Календарь</button>
     <button id="tabHistory" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-slate-500 transition"><span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300 opacity-0"></span><i class="fa-solid fa-chart-column"></i>Итоги</button>
   </nav>
 
-  <!-- ШТОРКИ И МОДАЛЬНЫЕ ОКНА -->
-  <div id="daySheet" class="absolute inset-0 z-40 hidden"><div id="dayBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div><div id="dayPanel" class="sheet-panel absolute inset-x-3 bottom-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60"><div class="mb-3 flex items-center justify-between"><p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-pen mr-2 text-amber-300"></i><span id="dayEditTitle">День</span></p><button id="dayEditClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button></div><div id="dayEditList" class="thin-scroll max-h-64 space-y-2 overflow-y-auto pr-0.5"></div><button id="dayAddBtn" class="mt-3 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить запись в этот день</button><button id="daySaveBtn" class="mt-2 w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 py-3 text-sm font-extrabold text-emerald-950 shadow-[0_10px_25px_-8px_rgba(52,211,153,0.5)] transition active:scale-[0.97]"><i class="fa-solid fa-floppy-disk mr-2"></i>Сохранить изменения</button><p class="mt-2 text-center text-[9px] text-slate-600">Категорию можно поменять в выпадающем списке</p></div></div>
-  <div id="iconSheet" class="absolute inset-0 z-40 hidden"><div id="iconBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div><div id="iconPanel" class="sheet-panel absolute inset-x-3 bottom-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60"><div class="mb-3 flex items-center justify-between"><p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-icons mr-2 text-sky-300"></i>Иконка расхода</p><button id="iconClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button></div><div id="iconGrid" class="grid grid-cols-6 gap-2"></div></div></div>
+  <!-- ШТОРКА РЕДАКТОРА ДНЯ (z-60 — поверх меню) -->
+  <div id="daySheet" class="absolute inset-0 z-[60] hidden">
+    <div id="dayBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
+    <div id="dayPanel" class="sheet-panel absolute inset-x-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60" style="bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+      <div class="mb-3 flex items-center justify-between"><p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-pen mr-2 text-amber-300"></i><span id="dayEditTitle">День</span></p><button id="dayEditClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button></div>
+      <div id="dayEditList" class="thin-scroll max-h-64 space-y-2 overflow-y-auto pr-0.5"></div>
+      <button id="dayAddBtn" class="mt-3 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить запись в этот день</button>
+      <button id="daySaveBtn" class="mt-2 w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 py-3 text-sm font-extrabold text-emerald-950 shadow-[0_10px_25px_-8px_rgba(52,211,153,0.5)] transition active:scale-[0.97]"><i class="fa-solid fa-floppy-disk mr-2"></i>Сохранить изменения</button>
+      <p class="mt-2 text-center text-[9px] text-slate-600">Категорию можно поменять в выпадающем списке</p>
+    </div>
+  </div>
+
+  <!-- ШТОРКА ВЫБОРА ИКОНКИ (z-60 — поверх меню) -->
+  <div id="iconSheet" class="absolute inset-0 z-[60] hidden">
+    <div id="iconBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
+    <div id="iconPanel" class="sheet-panel absolute inset-x-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60" style="bottom: calc(0.75rem + env(safe-area-inset-bottom));">
+      <div class="mb-3 flex items-center justify-between"><p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-icons mr-2 text-sky-300"></i>Иконка расхода</p><button id="iconClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button></div>
+      <div id="iconGrid" class="grid grid-cols-6 gap-2"></div>
+    </div>
+  </div>
 
 </div>
 
-<!-- ШАБЛОНЫ СТРОК (ОСТАВЛЕНЫ БЕЗ ИЗМЕНЕНИЙ ДЛЯ СОКРАЩЕНИЯ) -->
+<!-- ШАБЛОНЫ СТРОК -->
 <template id="tplIncome"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><span class="ml-1 h-2 w-2 shrink-0 rounded-full bg-emerald-300/80"></span><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-300/50" placeholder="Источник: зарплата, аренда…"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-emerald-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-4"><i class="fa-regular fa-calendar text-[11px] text-emerald-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-emerald-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
 <template id="tplCredit"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><span class="ml-1 h-2 w-2 shrink-0 rounded-full bg-rose-400/80"></span><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-rose-300/50" placeholder="За что: ипотека, авто, ремонт…"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-rose-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-4"><i class="fa-regular fa-calendar text-[11px] text-rose-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-rose-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
 <template id="tplFamily"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><button type="button" class="icon-btn grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-400/10 text-sky-300 transition hover:bg-sky-400/20 active:scale-90"><i class="fa-solid fa-star text-sm"></i></button><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-300/50" placeholder="Например: садик №5, английский"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-sky-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-11"><i class="fa-regular fa-calendar text-[11px] text-sky-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-sky-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
@@ -302,9 +316,9 @@ const UI = (() => {
   function openPicker(section, id, rowEl) { picker = { section, id, rowEl }; $('iconSheet').classList.remove('hidden'); requestAnimationFrame(() => $('iconPanel').classList.add('sheet-open')); }
   function closePicker() { picker = null; $('iconPanel').classList.remove('sheet-open'); setTimeout(() => $('iconSheet').classList.add('hidden'), 280); }
   function applyIcon(icon) { if (!picker) return; BudgetState.setField(picker.section, picker.id, 'icon', icon); const i = picker.rowEl.querySelector('.icon-btn i'); if (i) i.className = 'fa-solid ' + icon; closePicker(); }
-  const TOAST_BASE = 'pointer-events-none absolute left-1/2 top-14 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border bg-[#0e1522]/95 px-4 py-2 text-xs font-bold shadow-xl shadow-black/40 transition-all duration-300 ';
+  const TOAST_BASE = 'pointer-events-none absolute left-1/2 top-14 z-[70] -translate-x-1/2 whitespace-nowrap rounded-full border bg-[#0e1522]/95 px-4 py-2 text-xs font-bold shadow-xl shadow-black/40 transition-all duration-300 ';
   const TOAST_TONES = { ok: 'border-emerald-300/30 text-emerald-300', warn: 'border-amber-300/30 text-amber-300', err: 'border-rose-300/30 text-rose-300' };
-  function showToast(text, tone = 'ok') { const t = $('toast'); t.className = TOAST_BASE + TOAST_TONES[tone]; t.textContent = text; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('opacity-0', '-translate-y-2'), 2200); }
+  function showToast(text, tone = 'ok') { const t = $('toast'); t.className = TOAST_BASE + TOAST_TONES[tone]; t.textContent = text; t.classList.remove('opacity-0', '-translate-y-2'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('opacity-0', '-translate-y-2'), 2200); }
   function init() { buildGrid(); $('iconBackdrop').addEventListener('click', closePicker); $('iconClose').addEventListener('click', closePicker); }
   return { STATUS, SECTIONS, fmtMoney, renderList, renderAll, updateSum, removeRow, focusRow, openPicker, closePicker, showToast, init };
 })();
@@ -372,10 +386,22 @@ const DayEditor = (() => {
     });
   }
   function open(day, key, preferred) { openDay = day; openKey = key; preferredSec = preferred || 'other'; const [y, m] = key.split('-').map(Number); $('dayEditTitle').textContent = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(y, m - 1, day)); renderList(); $('daySheet').classList.remove('hidden'); requestAnimationFrame(() => $('dayPanel').classList.add('sheet-open')); }
-  function close() { UI.renderAll(); $('dayPanel').classList.remove('sheet-open'); setTimeout(() => $('daySheet').classList.add('hidden'), 280); }
+  function close() {
+    UI.renderAll();
+    const panel = $('dayPanel'), sheet = $('daySheet');
+    panel.classList.remove('sheet-open');
+    sheet.style.pointerEvents = 'none';
+    setTimeout(() => { sheet.classList.add('hidden'); sheet.style.pointerEvents = ''; }, 300);
+  }
   function add() { BudgetState.add(preferredSec, Object.assign(BudgetState.blankItem(preferredSec), { date: dateStr() })); fire(); renderList(); }
-  function save() { fire(); if (window.AppSaveMonth) AppSaveMonth(); close(); }
-  function init(cb) { onChange = cb; $('dayBackdrop').addEventListener('click', close); $('dayEditClose').addEventListener('click', close); $('dayAddBtn').addEventListener('click', add); $('daySaveBtn').addEventListener('click', save); }
+  function save() { fire(); if (window.AppSaveMonth) window.AppSaveMonth(); close(); }
+  function init(cb) {
+    onChange = cb;
+    $('dayBackdrop').onclick = close;
+    $('dayEditClose').onclick = close;
+    $('dayAddBtn').onclick = add;
+    $('daySaveBtn').onclick = save;
+  }
   return { init, open, close, save };
 })();
 
@@ -573,24 +599,25 @@ const CalendarView = (() => {
   });
   document.addEventListener('input', (e) => { const row = e.target.closest('[data-id]'); if (!row) return; for (const cls in FIELD_MAP) { if (e.target.classList.contains(cls)) { BudgetState.setField(row.dataset.section, Number(row.dataset.id), FIELD_MAP[cls], e.target.value); break; } } UI.updateSum(row.dataset.section); markDirty(); });
   document.addEventListener('change', (e) => { if (!e.target.classList.contains('row-repeat')) return; const row = e.target.closest('[data-id]'); const checked = e.target.checked; BudgetState.setField(row.dataset.section, Number(row.dataset.id), 'repeat', checked); const chip = row.querySelector('.repeat-note'); if (chip) { chip.classList.toggle('hidden', !checked); chip.classList.toggle('inline-flex', checked); } markDirty(); UI.showToast(checked ? 'Запись повторится в следующих месяцах' : 'Повторение выключено'); });
-  
-  /* ===== ЭКСПОРТ / ИМПОРТ ДАННЫХ ===== */
+
+  /* ===== ЭКСПОРТ / ИМПОРТ КОПИИ ===== */
   function exportData() {
-    const db = Storage.listEntries(); if (!db.length) { UI.showToast('Нет данных для экспорта', 'warn'); return; }
+    const db = Storage.listEntries(); if (!db.length) { UI.showToast('Нет данных для копирования', 'warn'); return; }
     const backup = { app: 'balance-pwa', version: '2.0', exportedAt: new Date().toISOString(), months: {} };
     db.forEach(entry => { backup.months[entry.key] = entry.data; });
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = url; a.download = `balance-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.href = url; a.download = `balance-copy-${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    UI.showToast('Резервная копия скачана');
+    UI.showToast('Копия скачана');
   }
   function importData(file) {
     const reader = new FileReader(); reader.onload = (e) => {
       try {
-        const json = JSON.parse(e.target.result); if (!json.months) throw new Error('Неверный формат');
+        const json = JSON.parse(e.target.result); if (!json.months) throw new Error('Неверный формат файла');
         const currentDb = Storage.read(); Object.assign(currentDb.months, json.months); Storage.write(currentDb);
-        UI.showToast('Данные восстановлены!'); History.render();
+        UI.showToast('Копия загружена — данные восстановлены');
+        History.render();
       } catch (err) { UI.showToast('Ошибка: ' + err.message, 'err'); }
     }; reader.readAsText(file);
   }
