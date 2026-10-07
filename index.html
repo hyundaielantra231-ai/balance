@@ -5,49 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <title>Баланс — учёт личных финансов</title>
-
-<!-- PWA: устанавливаемое приложение -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Баланс">
-<style>
-/* 🔥 ЖЕСТКИЙ ЗАПРЕТ АВТО-ЗУМА НА iOS */
-input, select, textarea {
-  font-size: 16px !important;
-  -webkit-text-size-adjust: 100%;
-}
-
-/* Остальные ваши стили... */
-:root { --ease: cubic-bezier(.22,1,.36,1); }
-...
-  nav { padding-bottom: env(safe-area-inset-bottom); }
-</style>
-
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = { theme: { extend: { fontFamily: { display:['Unbounded','sans-serif'], body:['Manrope','sans-serif'] } } } };
-</script>
+<script>tailwind.config = { theme: { extend: { fontFamily: { display:['Unbounded','sans-serif'], body:['Manrope','sans-serif'] } } } };</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 <style>
 :root { --ease: cubic-bezier(.22,1,.36,1); }
-* { -webkit-tap-highlight-color: transparent; }
-html, body { background: #05070c; }
-input, select, textarea { 
-  appearance: none; 
-  color-scheme: dark; 
-  font-size: 16px !important; /* Запрещает авто-зум на iOS */
-}
-  /* Запрет авто-зума при фокусе на полях ввода (iOS Safari) */
-input:focus, select:focus, textarea:focus {
-  font-size: 16px !important;
-}
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+html, body { background: #05070c; height: 100%; overflow: hidden; }
+input, select, textarea { appearance: none; color-scheme: dark; font-size: 16px !important; -webkit-text-size-adjust: 100%; }
 button, [role="button"], input, select, label { touch-action: manipulation; }
 button { -webkit-user-select: none; user-select: none; }
-input[type="date"]::-webkit-calendar-picker-indicator { opacity:.5; cursor:pointer; }
 .thin-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.12) transparent; }
 .thin-scroll::-webkit-scrollbar { width:4px; }
 .thin-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius:99px; }
@@ -61,8 +35,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity:.5; cursor:point
 .row-in { animation: rowIn .3s var(--ease) both; }
 @keyframes rowOut { to { opacity:0; transform:scale(.94); } }
 .row-out { animation: rowOut .18s ease forwards; }
-@keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(52,211,153,.6); } 50% { box-shadow:0 0 0 6px rgba(52,211,153,0); } }
-.row-pulse { animation: pulse .8s ease-in-out 2; border-color: rgba(52,211,153,.55) !important; }
 .sheet-panel { transform: translateY(115%); transition: transform .3s var(--ease); }
 .sheet-open { transform: none; }
 @keyframes flash { 0% { box-shadow:0 0 0 0 rgba(52,211,153,.35); } 100% { box-shadow:0 0 0 20px rgba(52,211,153,0); } }
@@ -72,475 +44,165 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity:.5; cursor:point
 #calGrid { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:pan-y; }
 </style>
 </head>
-<body class="font-body text-slate-100 relative overflow-hidden">
+<body class="font-body text-slate-100 relative h-full w-full overflow-hidden">
 <div class="glow glow-a" aria-hidden="true"></div>
 <div class="glow glow-b" aria-hidden="true"></div>
 
-<div class="relative z-10 w-full anim-rise">
-  <div class="">
-    <div class="relative flex flex-col overflow-hidden bg-[#0a0e16]" style="height:100dvh;">
-
-      <div id="toast" class="pointer-events-none absolute left-1/2 top-14 z-50 -translate-x-1/2 -translate-y-2 whitespace-nowrap rounded-full border border-emerald-300/30 bg-[#0e1522]/95 px-4 py-2 text-xs font-bold text-emerald-300 opacity-0 shadow-xl shadow-black/40 transition-all duration-300"></div>
-
-      <div class="flex shrink-0 items-center justify-between px-7 pt-3.5 text-[12px] font-semibold text-slate-300" style="padding-top:calc(env(safe-area-inset-top) + 10px);">
-        <span id="clock" class="tracking-wide">--:--</span>
-      </div>
-
-      <div id="appScroll" class="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-4">
-
-        <!-- ЭКРАН: БЮДЖЕТ -->
-        <div id="screenEditor">
-          <header class="mb-4">
-            <div class="mb-4 flex items-center gap-3">
-              <div class="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-lg text-emerald-950 shadow-lg shadow-emerald-500/20"><i class="fa-solid fa-scale-balanced"></i></div>
-              <div>
-                <p class="text-[13px] font-extrabold uppercase tracking-[0.28em] text-emerald-300/90">Баланс</p>
-                <p class="text-xs font-medium text-slate-500">Личные финансы — просто и наглядно</p>
-              </div>
-            </div>
-            <div class="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
-              <button id="prevMonth" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-left text-sm"></i></button>
-              <div class="text-center">
-                <p id="monthLabel" class="font-display text-sm font-bold">—</p>
-                <p id="savedTag" class="text-[10px] font-bold text-slate-500"></p>
-              </div>
-              <button id="nextMonth" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-right text-sm"></i></button>
-            </div>
-          </header>
-
-          <div id="reminder" class="mb-4 hidden">
-            <div class="flex items-center gap-3 rounded-2xl border border-amber-300/25 bg-gradient-to-br from-amber-300/10 to-orange-300/5 p-3">
-              <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-300/15 text-amber-300"><i class="fa-solid fa-bell"></i></div>
-              <div class="min-w-0 flex-1">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-amber-300/80">Ближайшее событие</p>
-                <p id="reminderText" class="mt-0.5 truncate text-sm font-bold text-slate-100">—</p>
-              </div>
-              <span id="reminderBadge" class="shrink-0 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[9px] font-bold text-amber-300">—</span>
-            </div>
-          </div>
-
-          <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Ввод данных</p>
-          <p class="mb-4 text-[10px] leading-relaxed text-slate-600"><i class="fa-solid fa-repeat mr-1 text-emerald-300/60"></i>Отметьте «каждый месяц» — запись повторится в следующих месяцах</p>
-
-          <section>
-            <div class="mb-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-sack-dollar text-sm"></i></span>
-                <h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Доходы</h2>
-              </div>
-              <span id="sumIncomes" class="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold text-emerald-300">0 ₽</span>
-            </div>
-            <div id="emptyIncomes" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Пока пусто — добавьте первый источник дохода</div>
-            <div id="listIncomes" class="space-y-2"></div>
-            <button type="button" data-section="incomes" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить доход</button>
-          </section>
-
-          <section class="mt-6">
-            <div class="mb-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-xl bg-rose-400/10 text-rose-300"><i class="fa-solid fa-hand-holding-dollar text-sm"></i></span>
-                <h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Кредиты</h2>
-              </div>
-              <span id="sumCredits" class="rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-[11px] font-bold text-rose-300">0 ₽</span>
-            </div>
-            <div id="emptyCredits" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Кредитов нет — и это прекрасно</div>
-            <div id="listCredits" class="space-y-2"></div>
-            <button type="button" data-section="credits" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-rose-300/25 py-2.5 text-[13px] font-semibold text-rose-300/90 transition hover:bg-rose-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить кредит</button>
-          </section>
-
-          <section class="mt-6">
-            <div class="mb-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-graduation-cap text-sm"></i></span>
-                <div>
-                  <h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Семья и обучение</h2>
-                  <p class="text-[10px] font-medium text-slate-600">садик, курсы и свои категории</p>
-                </div>
-              </div>
-              <span id="sumFamily" class="rounded-full border border-sky-300/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-bold text-sky-300">0 ₽</span>
-            </div>
-            <div id="emptyFamily" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте расход и выберите для него иконку</div>
-            <div id="listFamily" class="space-y-2"></div>
-            <button type="button" data-section="family" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-sky-300/25 py-2.5 text-[13px] font-semibold text-sky-300/90 transition hover:bg-sky-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить расход</button>
-          </section>
-
-          <section class="mt-6">
-            <div class="mb-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-xl bg-amber-300/10 text-amber-300"><i class="fa-solid fa-bolt text-sm"></i></span>
-                <div>
-                  <h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Коммунальные услуги</h2>
-                  <p class="text-[10px] font-medium text-slate-600">услуга + объект недвижимости</p>
-                </div>
-              </div>
-              <span id="sumUtils" class="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">0 ₽</span>
-            </div>
-            <div id="emptyUtils" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте услугу и укажите недвижимость</div>
-            <div id="listUtils" class="space-y-2"></div>
-            <button type="button" data-section="utils" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-amber-300/25 py-2.5 text-[13px] font-semibold text-amber-300/90 transition hover:bg-amber-300/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить услугу</button>
-          </section>
-
-          <section class="mt-6">
-            <div class="mb-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-shapes text-sm"></i></span>
-                <div>
-                  <h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Иные</h2>
-                  <p class="text-[10px] font-medium text-slate-600">любой расход со своим названием и иконкой</p>
-                </div>
-              </div>
-              <span id="sumOther" class="rounded-full border border-violet-300/20 bg-violet-400/10 px-2.5 py-1 text-[11px] font-bold text-violet-300">0 ₽</span>
-            </div>
-            <div id="emptyOther" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте расход, который не подошёл к другим категориям</div>
-            <div id="listOther" class="space-y-2"></div>
-            <button type="button" data-section="other" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-violet-300/25 py-2.5 text-[13px] font-semibold text-violet-300/90 transition hover:bg-violet-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить пункт</button>
-          </section>
-
-          <section id="resultCard" class="mt-7">
-            <div class="rounded-[26px] bg-gradient-to-br from-emerald-400/50 via-white/10 to-rose-400/40 p-[1.5px] shadow-xl shadow-black/40">
-              <div class="rounded-[24.5px] bg-[#101522] px-5 py-5">
-                <div class="mb-3 flex items-center justify-between">
-                  <h2 class="flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300"><i class="fa-solid fa-chart-pie text-emerald-300"></i> Сводка месяца</h2>
-                  <span id="loadChip" class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-400"><i class="fa-solid fa-circle-minus"></i> нет данных</span>
-                </div>
-                <div class="flex items-center justify-between border-b border-white/5 py-3">
-                  <span class="flex items-center gap-2 text-sm text-slate-400"><i class="fa-solid fa-arrow-trend-up text-emerald-400/80"></i> Всего доходов</span>
-                  <span id="outIncome" class="text-base font-bold text-emerald-300">—</span>
-                </div>
-                <div class="flex items-center justify-between pt-3">
-                  <span class="flex items-center gap-2 text-sm text-slate-400"><i class="fa-solid fa-arrow-trend-down text-rose-400/80"></i> Всего расходов</span>
-                  <span id="outExpenses" class="text-base font-bold text-rose-300">—</span>
-                </div>
-                <div class="mt-2 grid grid-cols-4 gap-1.5">
-                  <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">Кредиты</p><p id="outCredit" class="mt-0.5 text-[12px] font-bold text-rose-300">—</p></div>
-                  <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">Семья</p><p id="outFamily" class="mt-0.5 text-[12px] font-bold text-sky-300">—</p></div>
-                  <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">ЖКХ</p><p id="outUtils" class="mt-0.5 text-[12px] font-bold text-amber-300">—</p></div>
-                  <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">Иные</p><p id="outOther" class="mt-0.5 text-[12px] font-bold text-violet-300">—</p></div>
-                </div>
-                <div class="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4">
-                  <span class="text-sm text-slate-400">Свободный остаток</span>
-                  <span id="outFree" class="font-display text-2xl font-bold text-slate-500">—</span>
-                </div>
-                <div class="mt-4">
-                  <div class="flex items-baseline justify-between">
-                    <span class="text-sm text-slate-400">Процент нагрузки</span>
-                    <span id="outLoad" class="font-display text-xl font-bold text-slate-100">—</span>
-                  </div>
-                  <div class="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
-                    <div id="loadBar" class="h-full w-0 rounded-full bg-gradient-to-r from-emerald-400 to-teal-300 transition-all duration-700 ease-out"></div>
-                  </div>
-                  <div class="mt-1.5 flex justify-between text-[10px] font-medium text-slate-600"><span>0%</span><span>30%</span><span>50%</span><span>70%</span><span>100%</span></div>
-                  <p id="loadMsg" class="mt-3 hidden items-center gap-2 text-xs text-slate-400"></p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <div class="mt-6">
-            <button id="saveBtn" class="group w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 py-4 text-base font-extrabold text-emerald-950 shadow-[0_12px_35px_-10px_rgba(52,211,153,0.55)] transition hover:shadow-[0_14px_40px_-8px_rgba(52,211,153,0.75)] active:scale-[0.97]">
-              <i class="fa-solid fa-floppy-disk mr-2 transition group-hover:-translate-y-0.5"></i>Сохранить месяц
-            </button>
-            <button id="calcBtn" class="mt-2.5 w-full rounded-2xl border border-white/15 bg-white/[0.04] py-3.5 text-sm font-bold text-slate-200 transition hover:border-emerald-300/40 hover:bg-white/[0.07] active:scale-[0.97]">
-              <i class="fa-solid fa-calculator mr-2 text-emerald-300"></i>Рассчитать нагрузку
-            </button>
-            <p id="formHint" class="mt-2.5 h-4 text-center text-xs font-medium text-amber-300 opacity-0 transition-opacity"></p>
-          </div>
-          <p class="mt-4 text-center text-[10px] text-slate-600"><i class="fa-solid fa-lock mr-1"></i>Данные хранятся локально в вашем браузере</p>
-        </div>
-
-        <!-- ЭКРАН: КАЛЕНДАРЬ -->
-        <div id="screenCalendar" class="hidden">
-          <header class="mb-4">
-            <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-amber-300/90">Платежи по дням</p>
-            <h2 class="mt-1 font-display text-[24px] font-bold">Календарь</h2>
-            <p class="mt-1 text-sm text-slate-400">Каждый день месяца как на ладони.</p>
-          </header>
-          <div class="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
-            <button id="calPrev" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-left text-sm"></i></button>
-            <div class="text-center">
-              <p id="calLabel" class="font-display text-sm font-bold">—</p>
-              <button id="calToday" class="hidden text-[10px] font-bold text-emerald-300/90 transition hover:text-emerald-200"><i class="fa-solid fa-location-crosshairs mr-0.5"></i>к текущему месяцу</button>
-            </div>
-            <button id="calNext" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-right text-sm"></i></button>
-          </div>
-          <div class="mt-3 grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-            <button id="calModeMonth" class="rounded-xl bg-white/[0.06] py-2 text-[11px] font-bold text-emerald-300 transition"><i class="fa-solid fa-calendar-days mr-1"></i>Месяц</button>
-            <button id="calModeWeek" class="rounded-xl py-2 text-[11px] font-bold text-slate-500 transition"><i class="fa-solid fa-calendar-week mr-1"></i>Неделя</button>
-          </div>
-          <div class="mt-3 grid grid-cols-3 gap-2">
-            <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-2.5 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доходы</p><p id="calIncome" class="mt-0.5 text-[13px] font-extrabold text-emerald-300">—</p></div>
-            <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-2.5 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расходы</p><p id="calExpenses" class="mt-0.5 text-[13px] font-extrabold text-rose-300">—</p></div>
-            <div id="calCopyMonth" role="button" tabindex="0" class="group cursor-pointer rounded-2xl border border-white/5 bg-white/[0.03] p-2.5 text-center transition hover:border-emerald-300/30 active:scale-95">
-              <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Остаток</p>
-              <p id="calFree" class="mt-0.5 text-[13px] font-extrabold text-emerald-300">—</p>
-              <p class="mt-0.5 text-[8px] font-bold text-slate-600 group-hover:text-emerald-300/80">копировать <i class="fa-solid fa-copy"></i></p>
-            </div>
-          </div>
-          <div class="mt-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><i class="fa-solid fa-chart-simple mr-1 text-emerald-300/70"></i>Остаток по неделям</p>
-            <div id="calChart" class="mt-2 h-24 w-full"></div>
-          </div>
-          <div class="mt-3 flex flex-wrap gap-1.5">
-            <button type="button" data-cat="incomes" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>Доходы</button>
-            <button type="button" data-cat="credits" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-rose-400"></span>Кредиты</button>
-            <button type="button" data-cat="family" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-sky-400"></span>Семья</button>
-            <button type="button" data-cat="utils" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-amber-300"></span>ЖКХ</button>
-            <button type="button" data-cat="other" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-violet-400"></span>Иные</button>
-          </div>
-          <p class="mt-1.5 text-[9px] text-slate-600"><i class="fa-solid fa-hand-pointer mr-1"></i>Тап — детали · удержание — редактировать день · свайп — листать</p>
-          <div class="mt-3 grid grid-cols-7 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
-            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span class="text-rose-300/50">Сб</span><span class="text-rose-300/50">Вс</span>
-          </div>
-          <div id="calGrid" class="mt-1.5 grid grid-cols-7 gap-1"></div>
-          <div id="calUpcoming" class="mt-5 hidden">
-            <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"><i class="fa-solid fa-bell mr-1.5 text-amber-300/80"></i>Ближайшие события</p>
-            <div id="calUpcomingList" class="space-y-2"></div>
-          </div>
-          <div class="mt-5">
-            <div class="flex items-center justify-between gap-2">
-              <p id="calDetailsTitle" class="font-display text-sm font-bold">—</p>
-              <div class="flex shrink-0 items-center gap-1.5">
-                <div id="calDetailsTotals" class="flex items-center gap-1.5"></div>
-                <button id="calCopyDay" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:border-emerald-300/30 hover:text-emerald-300 active:scale-90"><i class="fa-solid fa-copy text-xs"></i></button>
-              </div>
-            </div>
-            <div id="calDetailsList" class="mt-2 space-y-2"></div>
-          </div>
-        </div>
-
-        <!-- ЭКРАН: ИТОГИ -->
-        <div id="screenHistory" class="hidden">
-          <header class="mb-4">
-            <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-sky-300/90">Итоги за период</p>
-            <h2 class="mt-1 font-display text-[24px] font-bold">Итоги</h2>
-            <p class="mt-1 text-sm text-slate-400">Сохранённые месяцы и сводка за выбранный период.</p>
-          </header>
-          <div class="mb-3 grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-            <button data-period="all" class="period-chip rounded-xl bg-white/[0.06] py-2 text-[10px] font-bold text-emerald-300 transition">Всё время</button>
-            <button data-period="year" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">Год</button>
-            <button data-period="6m" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">6 мес</button>
-            <button data-period="3m" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">3 мес</button>
-<!-- КНОПКИ РЕЗЕРВНОГО КОПИРОВАНИЯ -->
-<div class="mt-8 border-t border-white/10 pt-6">
-  <p class="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
-    <i class="fa-solid fa-shield-halved mr-1"></i> Резервное копирование
-  </p>
-  <div class="grid grid-cols-2 gap-3">
-    <button id="btnExport" type="button" class="rounded-2xl border border-emerald-300/20 bg-emerald-400/5 py-3 text-xs font-bold text-emerald-300 transition hover:bg-emerald-400/10 active:scale-95">
-      <i class="fa-solid fa-download mr-1.5"></i> Скачать JSON
-    </button>
-    <label for="fileImport" class="cursor-pointer rounded-2xl border border-sky-300/20 bg-sky-400/5 py-3 text-center text-xs font-bold text-sky-300 transition hover:bg-sky-400/10 active:scale-95">
-      <i class="fa-solid fa-upload mr-1.5"></i> Загрузить JSON
-    </label>
-    <input type="file" id="fileImport" accept=".json" class="hidden">
+<div class="relative z-10 flex h-full w-full flex-col bg-[#0a0e16] anim-rise">
+  
+  <!-- Верхняя панель с часами -->
+  <div class="flex shrink-0 items-center justify-between px-7 pt-3.5 text-[12px] font-semibold text-slate-300" style="padding-top:calc(env(safe-area-inset-top) + 10px);">
+    <span id="clock" class="tracking-wide">--:--</span>
   </div>
-  <p class="mt-3 text-center text-[9px] leading-relaxed text-slate-600">
-    Скачайте файл для хранения.<br>При переустановке приложения загрузите его обратно.
-  </p>
-</div>
-          <p id="periodCount" class="mb-2 text-[10px] font-medium text-slate-600"></p>
-          <div id="periodStats" class="grid grid-cols-3 gap-2">
-            <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доходы за период</p><p id="pIncome" class="mt-1 text-[13px] font-extrabold text-emerald-300">—</p></div>
-            <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расходы за период</p><p id="pExpenses" class="mt-1 text-[13px] font-extrabold text-rose-300">—</p></div>
-            <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Средняя нагрузка</p><p id="pLoad" class="mt-1 text-[13px] font-extrabold text-amber-300">—</p></div>
+
+  <!-- Область прокрутки контента -->
+  <div id="appScroll" class="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-28 pt-4">
+    
+    <!-- ЭКРАН: БЮДЖЕТ -->
+    <div id="screenEditor">
+      <header class="mb-4">
+        <div class="mb-4 flex items-center gap-3">
+          <div class="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-lg text-emerald-950 shadow-lg shadow-emerald-500/20"><i class="fa-solid fa-scale-balanced"></i></div>
+          <div>
+            <p class="text-[13px] font-extrabold uppercase tracking-[0.28em] text-emerald-300/90">Баланс</p>
+            <p class="text-xs font-medium text-slate-500">Личные финансы — просто и наглядно</p>
           </div>
-          <div id="historyList" class="mt-4 space-y-3"></div>
-          <div id="historyEmpty" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center">
-            <i class="fa-solid fa-box-archive mb-2 text-xl text-slate-600"></i>
-            <p class="text-xs leading-relaxed text-slate-500">Нет сохранённых месяцев за выбранный период.<br>Нажмите «Сохранить месяц» в редакторе — и он появится здесь.</p>
+        </div>
+        <div class="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
+          <button id="prevMonth" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-left text-sm"></i></button>
+          <div class="text-center">
+            <p id="monthLabel" class="font-display text-sm font-bold">—</p>
+            <p id="savedTag" class="text-[10px] font-bold text-slate-500"></p>
           </div>
+          <button id="nextMonth" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-right text-sm"></i></button>
+        </div>
+      </header>
+
+      <div id="reminder" class="mb-4 hidden">
+        <div class="flex items-center gap-3 rounded-2xl border border-amber-300/25 bg-gradient-to-br from-amber-300/10 to-orange-300/5 p-3">
+          <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-300/15 text-amber-300"><i class="fa-solid fa-bell"></i></div>
+          <div class="min-w-0 flex-1">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-amber-300/80">Ближайшее событие</p>
+            <p id="reminderText" class="mt-0.5 truncate text-sm font-bold text-slate-100">—</p>
+          </div>
+          <span id="reminderBadge" class="shrink-0 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[9px] font-bold text-amber-300">—</span>
         </div>
       </div>
 
-      <!-- ТАБ-БАР -->
-      <nav class="flex shrink-0 border-t border-white/10 bg-[#0c111c]/95 backdrop-blur">
-        <button id="tabBudget" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-emerald-300 transition">
-          <span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300"></span><i class="fa-solid fa-pen-to-square"></i>Бюджет
-        </button>
-        <button id="tabCalendar" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-slate-500 transition">
-          <span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300 opacity-0"></span><i class="fa-solid fa-calendar-days"></i>Календарь
-        </button>
-        <button id="tabHistory" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-slate-500 transition">
-          <span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300 opacity-0"></span><i class="fa-solid fa-chart-column"></i>Итоги
-        </button>
-      </nav>
+      <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500">Ввод данных</p>
+      <p class="mb-4 text-[10px] leading-relaxed text-slate-600"><i class="fa-solid fa-repeat mr-1 text-emerald-300/60"></i>Отметьте «каждый месяц» — запись повторится в следующих месяцах</p>
 
-      <!-- ШТОРКА РЕДАКТОРА ДНЯ -->
-      <div id="daySheet" class="absolute inset-0 z-40 hidden">
-        <div id="dayBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
-        <div id="dayPanel" class="sheet-panel absolute inset-x-3 bottom-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60">
-          <div class="mb-3 flex items-center justify-between">
-            <p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-pen mr-2 text-amber-300"></i><span id="dayEditTitle">День</span></p>
-            <button id="dayEditClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button>
+      <!-- Секции ввода (Доходы, Кредиты, Семья, ЖКХ, Иные) -->
+      <section><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-solid fa-sack-dollar text-sm"></i></span><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Доходы</h2></div><span id="sumIncomes" class="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold text-emerald-300">0 ₽</span></div><div id="emptyIncomes" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Пока пусто — добавьте первый источник дохода</div><div id="listIncomes" class="space-y-2"></div><button type="button" data-section="incomes" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить доход</button></section>
+      <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-rose-400/10 text-rose-300"><i class="fa-solid fa-hand-holding-dollar text-sm"></i></span><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Кредиты</h2></div><span id="sumCredits" class="rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-[11px] font-bold text-rose-300">0 ₽</span></div><div id="emptyCredits" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Кредитов нет — и это прекрасно</div><div id="listCredits" class="space-y-2"></div><button type="button" data-section="credits" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-rose-300/25 py-2.5 text-[13px] font-semibold text-rose-300/90 transition hover:bg-rose-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить кредит</button></section>
+      <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-graduation-cap text-sm"></i></span><div><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Семья и обучение</h2><p class="text-[10px] font-medium text-slate-600">садик, курсы и свои категории</p></div></div><span id="sumFamily" class="rounded-full border border-sky-300/20 bg-sky-400/10 px-2.5 py-1 text-[11px] font-bold text-sky-300">0 ₽</span></div><div id="emptyFamily" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте расход и выберите для него иконку</div><div id="listFamily" class="space-y-2"></div><button type="button" data-section="family" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-sky-300/25 py-2.5 text-[13px] font-semibold text-sky-300/90 transition hover:bg-sky-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить расход</button></section>
+      <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-amber-300/10 text-amber-300"><i class="fa-solid fa-bolt text-sm"></i></span><div><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Коммунальные услуги</h2><p class="text-[10px] font-medium text-slate-600">услуга + объект недвижимости</p></div></div><span id="sumUtils" class="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[11px] font-bold text-amber-300">0 ₽</span></div><div id="emptyUtils" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте услугу и укажите недвижимость</div><div id="listUtils" class="space-y-2"></div><button type="button" data-section="utils" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-amber-300/25 py-2.5 text-[13px] font-semibold text-amber-300/90 transition hover:bg-amber-300/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить услугу</button></section>
+      <section class="mt-6"><div class="mb-2.5 flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="grid h-8 w-8 place-items-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-shapes text-sm"></i></span><div><h2 class="font-display text-[12px] font-bold uppercase tracking-[0.18em] text-slate-300">Иные</h2><p class="text-[10px] font-medium text-slate-600">любой расход со своим названием и иконкой</p></div></div><span id="sumOther" class="rounded-full border border-violet-300/20 bg-violet-400/10 px-2.5 py-1 text-[11px] font-bold text-violet-300">0 ₽</span></div><div id="emptyOther" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-5 text-center text-xs text-slate-600">Добавьте расход, который не подошёл к другим категориям</div><div id="listOther" class="space-y-2"></div><button type="button" data-section="other" class="add-btn mt-2.5 w-full rounded-2xl border border-dashed border-violet-300/25 py-2.5 text-[13px] font-semibold text-violet-300/90 transition hover:bg-violet-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить пункт</button></section>
+
+      <!-- Сводка месяца -->
+      <section id="resultCard" class="mt-7">
+        <div class="rounded-[26px] bg-gradient-to-br from-emerald-400/50 via-white/10 to-rose-400/40 p-[1.5px] shadow-xl shadow-black/40">
+          <div class="rounded-[24.5px] bg-[#101522] px-5 py-5">
+            <div class="mb-3 flex items-center justify-between"><h2 class="flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300"><i class="fa-solid fa-chart-pie text-emerald-300"></i> Сводка месяца</h2><span id="loadChip" class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-400"><i class="fa-solid fa-circle-minus"></i> нет данных</span></div>
+            <div class="flex items-center justify-between border-b border-white/5 py-3"><span class="flex items-center gap-2 text-sm text-slate-400"><i class="fa-solid fa-arrow-trend-up text-emerald-400/80"></i> Всего доходов</span><span id="outIncome" class="text-base font-bold text-emerald-300">—</span></div>
+            <div class="flex items-center justify-between pt-3"><span class="flex items-center gap-2 text-sm text-slate-400"><i class="fa-solid fa-arrow-trend-down text-rose-400/80"></i> Всего расходов</span><span id="outExpenses" class="text-base font-bold text-rose-300">—</span></div>
+            <div class="mt-2 grid grid-cols-4 gap-1.5">
+              <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">Кредиты</p><p id="outCredit" class="mt-0.5 text-[12px] font-bold text-rose-300">—</p></div>
+              <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">Семья</p><p id="outFamily" class="mt-0.5 text-[12px] font-bold text-sky-300">—</p></div>
+              <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">ЖКХ</p><p id="outUtils" class="mt-0.5 text-[12px] font-bold text-amber-300">—</p></div>
+              <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2 text-center"><p class="text-[9px] font-medium text-slate-500">Иные</p><p id="outOther" class="mt-0.5 text-[12px] font-bold text-violet-300">—</p></div>
+            </div>
+            <div class="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4"><span class="text-sm text-slate-400">Свободный остаток</span><span id="outFree" class="font-display text-2xl font-bold text-slate-500">—</span></div>
+            <div class="mt-4"><div class="flex items-baseline justify-between"><span class="text-sm text-slate-400">Процент нагрузки</span><span id="outLoad" class="font-display text-xl font-bold text-slate-100">—</span></div><div class="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.07]"><div id="loadBar" class="h-full w-0 rounded-full bg-gradient-to-r from-emerald-400 to-teal-300 transition-all duration-700 ease-out"></div></div><div class="mt-1.5 flex justify-between text-[10px] font-medium text-slate-600"><span>0%</span><span>30%</span><span>50%</span><span>70%</span><span>100%</span></div><p id="loadMsg" class="mt-3 hidden items-center gap-2 text-xs text-slate-400"></p></div>
           </div>
-          <div id="dayEditList" class="thin-scroll max-h-64 space-y-2 overflow-y-auto pr-0.5"></div>
-          <button id="dayAddBtn" class="mt-3 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить запись в этот день</button>
-          <button id="daySaveBtn" class="mt-2 w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 py-3 text-sm font-extrabold text-emerald-950 shadow-[0_10px_25px_-8px_rgba(52,211,153,0.5)] transition active:scale-[0.97]"><i class="fa-solid fa-floppy-disk mr-2"></i>Сохранить изменения</button>
-          <p class="mt-2 text-center text-[9px] text-slate-600">Категорию можно поменять в выпадающем списке</p>
         </div>
-      </div>
+      </section>
 
-      <!-- ПАНЕЛЬ ИКОНКИ -->
-      <div id="iconSheet" class="absolute inset-0 z-40 hidden">
-        <div id="iconBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
-        <div id="iconPanel" class="sheet-panel absolute inset-x-3 bottom-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60">
-          <div class="mb-3 flex items-center justify-between">
-            <p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-icons mr-2 text-sky-300"></i>Иконка расхода</p>
-            <button id="iconClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button>
-          </div>
-          <div id="iconGrid" class="grid grid-cols-6 gap-2"></div>
-        </div>
+      <div class="mt-6">
+        <button id="saveBtn" class="group w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 py-4 text-base font-extrabold text-emerald-950 shadow-[0_12px_35px_-10px_rgba(52,211,153,0.55)] transition hover:shadow-[0_14px_40px_-8px_rgba(52,211,153,0.75)] active:scale-[0.97]"><i class="fa-solid fa-floppy-disk mr-2 transition group-hover:-translate-y-0.5"></i>Сохранить месяц</button>
+        <button id="calcBtn" class="mt-2.5 w-full rounded-2xl border border-white/15 bg-white/[0.04] py-3.5 text-sm font-bold text-slate-200 transition hover:border-emerald-300/40 hover:bg-white/[0.07] active:scale-[0.97]"><i class="fa-solid fa-calculator mr-2 text-emerald-300"></i>Рассчитать нагрузку</button>
+        <p id="formHint" class="mt-2.5 h-4 text-center text-xs font-medium text-amber-300 opacity-0 transition-opacity"></p>
       </div>
-
+      <p class="mt-4 text-center text-[10px] text-slate-600"><i class="fa-solid fa-lock mr-1"></i>Данные хранятся локально в вашем браузере</p>
     </div>
+
+    <!-- ЭКРАН: КАЛЕНДАРЬ -->
+    <div id="screenCalendar" class="hidden">
+      <header class="mb-4"><p class="text-[11px] font-bold uppercase tracking-[0.28em] text-amber-300/90">Платежи по дням</p><h2 class="mt-1 font-display text-[24px] font-bold">Календарь</h2><p class="mt-1 text-sm text-slate-400">Каждый день месяца как на ладони.</p></header>
+      <div class="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-1.5"><button id="calPrev" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-left text-sm"></i></button><div class="text-center"><p id="calLabel" class="font-display text-sm font-bold">—</p><button id="calToday" class="hidden text-[10px] font-bold text-emerald-300/90 transition hover:text-emerald-200"><i class="fa-solid fa-location-crosshairs mr-0.5"></i>к текущему месяцу</button></div><button id="calNext" class="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-90"><i class="fa-solid fa-chevron-right text-sm"></i></button></div>
+      <div class="mt-3 grid grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1"><button id="calModeMonth" class="rounded-xl bg-white/[0.06] py-2 text-[11px] font-bold text-emerald-300 transition"><i class="fa-solid fa-calendar-days mr-1"></i>Месяц</button><button id="calModeWeek" class="rounded-xl py-2 text-[11px] font-bold text-slate-500 transition"><i class="fa-solid fa-calendar-week mr-1"></i>Неделя</button></div>
+      <div class="mt-3 grid grid-cols-3 gap-2"><div class="rounded-2xl border border-white/5 bg-white/[0.03] p-2.5 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доходы</p><p id="calIncome" class="mt-0.5 text-[13px] font-extrabold text-emerald-300">—</p></div><div class="rounded-2xl border border-white/5 bg-white/[0.03] p-2.5 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расходы</p><p id="calExpenses" class="mt-0.5 text-[13px] font-extrabold text-rose-300">—</p></div><div id="calCopyMonth" role="button" tabindex="0" class="group cursor-pointer rounded-2xl border border-white/5 bg-white/[0.03] p-2.5 text-center transition hover:border-emerald-300/30 active:scale-95"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Остаток</p><p id="calFree" class="mt-0.5 text-[13px] font-extrabold text-emerald-300">—</p><p class="mt-0.5 text-[8px] font-bold text-slate-600 group-hover:text-emerald-300/80">копировать <i class="fa-solid fa-copy"></i></p></div></div>
+      <div class="mt-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3"><p class="text-[10px] font-bold uppercase tracking-wider text-slate-500"><i class="fa-solid fa-chart-simple mr-1 text-emerald-300/70"></i>Остаток по неделям</p><div id="calChart" class="mt-2 h-24 w-full"></div></div>
+      <div class="mt-3 flex flex-wrap gap-1.5"><button type="button" data-cat="incomes" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>Доходы</button><button type="button" data-cat="credits" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-rose-400"></span>Кредиты</button><button type="button" data-cat="family" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-sky-400"></span>Семья</button><button type="button" data-cat="utils" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-amber-300"></span>ЖКХ</button><button type="button" data-cat="other" class="cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95"><span class="h-2 w-2 rounded-full bg-violet-400"></span>Иные</button></div>
+      <p class="mt-1.5 text-[9px] text-slate-600"><i class="fa-solid fa-hand-pointer mr-1"></i>Тап — детали · удержание — редактировать день · свайп — листать</p>
+      <div class="mt-3 grid grid-cols-7 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span class="text-rose-300/50">Сб</span><span class="text-rose-300/50">Вс</span></div>
+      <div id="calGrid" class="mt-1.5 grid grid-cols-7 gap-1"></div>
+      <div id="calUpcoming" class="mt-5 hidden"><p class="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"><i class="fa-solid fa-bell mr-1.5 text-amber-300/80"></i>Ближайшие события</p><div id="calUpcomingList" class="space-y-2"></div></div>
+      <div class="mt-5"><div class="flex items-center justify-between gap-2"><p id="calDetailsTitle" class="font-display text-sm font-bold">—</p><div class="flex shrink-0 items-center gap-1.5"><div id="calDetailsTotals" class="flex items-center gap-1.5"></div><button id="calCopyDay" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:border-emerald-300/30 hover:text-emerald-300 active:scale-90"><i class="fa-solid fa-copy text-xs"></i></button></div></div><div id="calDetailsList" class="mt-2 space-y-2"></div></div>
+    </div>
+
+    <!-- ЭКРАН: ИТОГИ (ИСПРАВЛЕННАЯ ВЕРСТКА) -->
+    <div id="screenHistory" class="hidden pb-24">
+      <header class="mb-4"><p class="text-[11px] font-bold uppercase tracking-[0.28em] text-sky-300/90">Итоги за период</p><h2 class="mt-1 font-display text-[24px] font-bold">Итоги</h2><p class="mt-1 text-sm text-slate-400">Сохранённые месяцы и сводка за выбранный период.</p></header>
+      
+      <div class="mb-3 grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+        <button data-period="all" class="period-chip rounded-xl bg-white/[0.06] py-2 text-[10px] font-bold text-emerald-300 transition">Всё время</button>
+        <button data-period="year" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">Год</button>
+        <button data-period="6m" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">6 мес</button>
+        <button data-period="3m" class="period-chip rounded-xl py-2 text-[10px] font-bold text-slate-500 transition">3 мес</button>
+      </div>
+      
+      <p id="periodCount" class="mb-2 text-[10px] font-medium text-slate-600"></p>
+      
+      <div id="periodStats" class="grid grid-cols-3 gap-2 mb-6">
+        <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доходы за период</p><p id="pIncome" class="mt-1 text-[13px] font-extrabold text-emerald-300">—</p></div>
+        <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расходы за период</p><p id="pExpenses" class="mt-1 text-[13px] font-extrabold text-rose-300">—</p></div>
+        <div class="rounded-2xl border border-white/5 bg-white/[0.03] p-3 text-center"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Средняя нагрузка</p><p id="pLoad" class="mt-1 text-[13px] font-extrabold text-amber-300">—</p></div>
+      </div>
+
+      <!-- РЕЗЕРВНОЕ КОПИРОВАНИЕ -->
+      <div class="mb-6 border-t border-white/10 pt-6">
+        <p class="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"><i class="fa-solid fa-shield-halved mr-1"></i> Резервное копирование</p>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btnExport" type="button" class="rounded-2xl border border-emerald-300/20 bg-emerald-400/5 py-3 text-xs font-bold text-emerald-300 transition hover:bg-emerald-400/10 active:scale-95"><i class="fa-solid fa-download mr-1.5"></i> Скачать JSON</button>
+          <label for="fileImport" class="cursor-pointer rounded-2xl border border-sky-300/20 bg-sky-400/5 py-3 text-center text-xs font-bold text-sky-300 transition hover:bg-sky-400/10 active:scale-95"><i class="fa-solid fa-upload mr-1.5"></i> Загрузить JSON</label>
+          <input type="file" id="fileImport" accept=".json" class="hidden">
+        </div>
+        <p class="mt-3 text-center text-[9px] leading-relaxed text-slate-600">Скачайте файл для хранения.<br>При переустановке загрузите его обратно.</p>
+      </div>
+
+      <div id="historyList" class="space-y-3"></div>
+      <div id="historyEmpty" class="hidden rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center"><i class="fa-solid fa-box-archive mb-2 text-xl text-slate-600"></i><p class="text-xs leading-relaxed text-slate-500">Нет сохранённых месяцев за выбранный период.<br>Нажмите «Сохранить месяц» в редакторе — и он появится здесь.</p></div>
+    </div>
+
   </div>
+
+  <!-- ТАБ-БАР (ЗАФИКСИРОВАН ВНИЗУ) -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 flex shrink-0 border-t border-white/10 bg-[#0c111c]/95 backdrop-blur safe-area-pb">
+    <button id="tabBudget" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-emerald-300 transition"><span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300"></span><i class="fa-solid fa-pen-to-square"></i>Бюджет</button>
+    <button id="tabCalendar" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-slate-500 transition"><span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300 opacity-0"></span><i class="fa-solid fa-calendar-days"></i>Календарь</button>
+    <button id="tabHistory" class="flex flex-1 flex-col items-center gap-1 pb-3 pt-2 text-[11px] font-bold text-slate-500 transition"><span class="tab-dot mb-0.5 h-1 w-8 rounded-full bg-emerald-300 opacity-0"></span><i class="fa-solid fa-chart-column"></i>Итоги</button>
+  </nav>
+
+  <!-- ШТОРКИ И МОДАЛЬНЫЕ ОКНА -->
+  <div id="daySheet" class="absolute inset-0 z-40 hidden"><div id="dayBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div><div id="dayPanel" class="sheet-panel absolute inset-x-3 bottom-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60"><div class="mb-3 flex items-center justify-between"><p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-pen mr-2 text-amber-300"></i><span id="dayEditTitle">День</span></p><button id="dayEditClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button></div><div id="dayEditList" class="thin-scroll max-h-64 space-y-2 overflow-y-auto pr-0.5"></div><button id="dayAddBtn" class="mt-3 w-full rounded-2xl border border-dashed border-emerald-300/25 py-2.5 text-[13px] font-semibold text-emerald-300/90 transition hover:bg-emerald-400/5 active:scale-[0.98]"><i class="fa-solid fa-plus mr-1.5"></i>Добавить запись в этот день</button><button id="daySaveBtn" class="mt-2 w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 py-3 text-sm font-extrabold text-emerald-950 shadow-[0_10px_25px_-8px_rgba(52,211,153,0.5)] transition active:scale-[0.97]"><i class="fa-solid fa-floppy-disk mr-2"></i>Сохранить изменения</button><p class="mt-2 text-center text-[9px] text-slate-600">Категорию можно поменять в выпадающем списке</p></div></div>
+  <div id="iconSheet" class="absolute inset-0 z-40 hidden"><div id="iconBackdrop" class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div><div id="iconPanel" class="sheet-panel absolute inset-x-3 bottom-3 rounded-3xl border border-white/10 bg-[#131824] p-4 shadow-2xl shadow-black/60"><div class="mb-3 flex items-center justify-between"><p class="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300"><i class="fa-solid fa-icons mr-2 text-sky-300"></i>Иконка расхода</p><button id="iconClose" class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white active:scale-90"><i class="fa-solid fa-xmark text-xs"></i></button></div><div id="iconGrid" class="grid grid-cols-6 gap-2"></div></div></div>
+
 </div>
 
-<!-- ШАБЛОНЫ СТРОК -->
-<template id="tplIncome">
-  <div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-    <div class="flex items-center gap-2">
-      <span class="ml-1 h-2 w-2 shrink-0 rounded-full bg-emerald-300/80"></span>
-      <input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-300/50" placeholder="Источник: зарплата, аренда…">
-      <input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-emerald-300/50" inputmode="decimal" placeholder="0 ₽">
-      <button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button>
-    </div>
-    <div class="mt-2 flex items-center gap-2 pl-4">
-      <i class="fa-regular fa-calendar text-[11px] text-emerald-300/70"></i>
-      <input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-emerald-300/50">
-      <span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span>
-      <label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500">
-        <input type="checkbox" class="row-repeat peer sr-only">
-        <span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span>
-        <span>каждый месяц</span>
-      </label>
-    </div>
-  </div>
-</template>
-
-<template id="tplCredit">
-  <div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-    <div class="flex items-center gap-2">
-      <span class="ml-1 h-2 w-2 shrink-0 rounded-full bg-rose-400/80"></span>
-      <input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-rose-300/50" placeholder="За что: ипотека, авто, ремонт…">
-      <input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-rose-300/50" inputmode="decimal" placeholder="0 ₽">
-      <button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button>
-    </div>
-    <div class="mt-2 flex items-center gap-2 pl-4">
-      <i class="fa-regular fa-calendar text-[11px] text-rose-300/70"></i>
-      <input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-rose-300/50">
-      <span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span>
-      <label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500">
-        <input type="checkbox" class="row-repeat peer sr-only">
-        <span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span>
-        <span>каждый месяц</span>
-      </label>
-    </div>
-  </div>
-</template>
-
-<template id="tplFamily">
-  <div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-    <div class="flex items-center gap-2">
-      <button type="button" class="icon-btn grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-400/10 text-sky-300 transition hover:bg-sky-400/20 active:scale-90"><i class="fa-solid fa-star text-sm"></i></button>
-      <input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-300/50" placeholder="Например: садик №5, английский">
-      <input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-sky-300/50" inputmode="decimal" placeholder="0 ₽">
-      <button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button>
-    </div>
-    <div class="mt-2 flex items-center gap-2 pl-11">
-      <i class="fa-regular fa-calendar text-[11px] text-sky-300/70"></i>
-      <input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-sky-300/50">
-      <span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span>
-      <label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500">
-        <input type="checkbox" class="row-repeat peer sr-only">
-        <span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span>
-        <span>каждый месяц</span>
-      </label>
-    </div>
-  </div>
-</template>
-
-<template id="tplUtil">
-  <div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
-    <div class="flex items-center gap-2">
-      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-300/10 text-amber-300"><i class="fa-solid fa-bolt text-sm"></i></span>
-      <input class="row-service min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-300/50" placeholder="Услуга: свет, вода, интернет…">
-      <input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-amber-300/50" inputmode="decimal" placeholder="0 ₽">
-      <button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button>
-    </div>
-    <div class="mt-2 flex items-center gap-2 pl-11">
-      <i class="fa-solid fa-house text-[10px] text-slate-600"></i>
-      <input class="row-property min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-slate-300 outline-none transition placeholder:text-slate-600 focus:border-amber-300/50" placeholder="Объект: квартира, дом, дача…">
-    </div>
-    <div class="mt-2 flex items-center gap-2 pl-11">
-      <i class="fa-regular fa-calendar text-[11px] text-amber-300/70"></i>
-      <input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-amber-300/50">
-      <span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span>
-      <label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500">
-        <input type="checkbox" class="row-repeat peer sr-only">
-        <span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span>
-        <span>каждый месяц</span>
-      </label>
-    </div>
-  </div>
-</template>
-
-<template id="tplOther">
-  <div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-    <div class="flex items-center gap-2">
-      <button type="button" class="icon-btn grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-300 transition hover:bg-violet-400/20 active:scale-90"><i class="fa-solid fa-tag text-sm"></i></button>
-      <input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-300/50" placeholder="Свой расход: подписки, подарки…">
-      <input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-violet-300/50" inputmode="decimal" placeholder="0 ₽">
-      <button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button>
-    </div>
-    <div class="mt-2 flex items-center gap-2 pl-11">
-      <i class="fa-regular fa-calendar text-[11px] text-violet-300/70"></i>
-      <input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-violet-300/50">
-      <span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span>
-      <label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500">
-        <input type="checkbox" class="row-repeat peer sr-only">
-        <span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span>
-        <span>каждый месяц</span>
-      </label>
-    </div>
-  </div>
-</template>
-
-<template id="tplHistory">
-  <div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
-    <div class="flex items-start justify-between gap-2">
-      <div>
-        <p class="h-month font-display text-sm font-bold">Месяц</p>
-        <p class="h-count mt-0.5 text-[10px] font-medium text-slate-500">—</p>
-      </div>
-      <span class="h-chip inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold">0%</span>
-    </div>
-    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-      <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доход</p><p class="h-income mt-0.5 text-xs font-bold text-emerald-300">—</p></div>
-      <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расход</p><p class="h-expenses mt-0.5 text-xs font-bold text-rose-300">—</p></div>
-      <div class="rounded-xl border border-white/5 bg-white/[0.03] p-2"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Остаток</p><p class="h-free mt-0.5 text-xs font-bold">—</p></div>
-    </div>
-    <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
-      <div class="h-bar h-full w-0 rounded-full bg-gradient-to-r from-emerald-400 to-teal-300"></div>
-    </div>
-    <div class="mt-3 flex gap-2">
-      <button type="button" class="h-open flex-1 rounded-xl border border-white/10 bg-white/[0.04] py-2 text-xs font-bold text-slate-300 transition hover:border-emerald-300/40 hover:text-emerald-300 active:scale-[0.98]"><i class="fa-solid fa-folder-open mr-1.5"></i>Открыть</button>
-      <button type="button" class="h-del grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-500 transition hover:border-rose-300/30 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-trash-can text-xs"></i></button>
-    </div>
-  </div>
-</template>
+<!-- ШАБЛОНЫ СТРОК (ОСТАВЛЕНЫ БЕЗ ИЗМЕНЕНИЙ ДЛЯ СОКРАЩЕНИЯ) -->
+<template id="tplIncome"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><span class="ml-1 h-2 w-2 shrink-0 rounded-full bg-emerald-300/80"></span><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-300/50" placeholder="Источник: зарплата, аренда…"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-emerald-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-4"><i class="fa-regular fa-calendar text-[11px] text-emerald-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-emerald-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
+<template id="tplCredit"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><span class="ml-1 h-2 w-2 shrink-0 rounded-full bg-rose-400/80"></span><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-rose-300/50" placeholder="За что: ипотека, авто, ремонт…"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-rose-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-4"><i class="fa-regular fa-calendar text-[11px] text-rose-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-rose-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
+<template id="tplFamily"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><button type="button" class="icon-btn grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-400/10 text-sky-300 transition hover:bg-sky-400/20 active:scale-90"><i class="fa-solid fa-star text-sm"></i></button><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-300/50" placeholder="Например: садик №5, английский"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-sky-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-11"><i class="fa-regular fa-calendar text-[11px] text-sky-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-sky-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
+<template id="tplUtil"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2.5"><div class="flex items-center gap-2"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-300/10 text-amber-300"><i class="fa-solid fa-bolt text-sm"></i></span><input class="row-service min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-amber-300/50" placeholder="Услуга: свет, вода, интернет…"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-amber-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-11"><i class="fa-solid fa-house text-[10px] text-slate-600"></i><input class="row-property min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-slate-300 outline-none transition placeholder:text-slate-600 focus:border-amber-300/50" placeholder="Объект: квартира, дом, дача…"></div><div class="mt-2 flex items-center gap-2 pl-11"><i class="fa-regular fa-calendar text-[11px] text-amber-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-amber-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
+<template id="tplOther"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-2"><div class="flex items-center gap-2"><button type="button" class="icon-btn grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-300 transition hover:bg-violet-400/20 active:scale-90"><i class="fa-solid fa-tag text-sm"></i></button><input class="row-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-300/50" placeholder="Свой расход: подписки, подарки…"><input class="row-amount w-24 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:font-semibold placeholder:text-slate-600 focus:border-violet-300/50" inputmode="decimal" placeholder="0 ₽"><button type="button" class="row-remove grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-xmark text-sm"></i></button></div><div class="mt-2 flex items-center gap-2 pl-11"><i class="fa-regular fa-calendar text-[11px] text-violet-300/70"></i><input type="date" class="row-date h-9 w-[136px] shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2.5 text-xs font-semibold text-slate-300 outline-none transition focus:border-violet-300/50"><span class="repeat-note hidden items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300"><i class="fa-solid fa-repeat text-[8px]"></i>повтор</span><label class="ml-auto flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[10px] font-bold text-slate-500"><input type="checkbox" class="row-repeat peer sr-only"><span class="grid h-4 w-4 place-items-center rounded border border-white/15 bg-white/[0.05] text-[8px] text-transparent transition peer-checked:border-emerald-300/60 peer-checked:bg-emerald-400/20 peer-checked:text-emerald-300"><i class="fa-solid fa-check"></i></span><span>каждый месяц</span></label></div></div></template>
+<template id="tplHistory"><div class="row-in rounded-2xl border border-white/10 bg-white/[0.03] p-3.5"><div class="flex items-start justify-between gap-2"><div><p class="h-month font-display text-sm font-bold">Месяц</p><p class="h-count mt-0.5 text-[10px] font-medium text-slate-500">—</p></div><span class="h-chip inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold">0%</span></div><div class="mt-3 grid grid-cols-3 gap-2 text-center"><div class="rounded-xl border border-white/5 bg-white/[0.03] p-2"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Доход</p><p class="h-income mt-0.5 text-xs font-bold text-emerald-300">—</p></div><div class="rounded-xl border border-white/5 bg-white/[0.03] p-2"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Расход</p><p class="h-expenses mt-0.5 text-xs font-bold text-rose-300">—</p></div><div class="rounded-xl border border-white/5 bg-white/[0.03] p-2"><p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Остаток</p><p class="h-free mt-0.5 text-xs font-bold">—</p></div></div><div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]"><div class="h-bar h-full w-0 rounded-full bg-gradient-to-r from-emerald-400 to-teal-300"></div></div><div class="mt-3 flex gap-2"><button type="button" class="h-open flex-1 rounded-xl border border-white/10 bg-white/[0.04] py-2 text-xs font-bold text-slate-300 transition hover:border-emerald-300/40 hover:text-emerald-300 active:scale-[0.98]"><i class="fa-solid fa-folder-open mr-1.5"></i>Открыть</button><button type="button" class="h-del grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-500 transition hover:border-rose-300/30 hover:text-rose-300 active:scale-90"><i class="fa-solid fa-trash-can text-xs"></i></button></div></div></template>
 
 <script>
 /* ================= 1. МАТЕМАТИКА ================= */
 const Calculator = {
-  toNumber(raw) {
-    const num = parseFloat(String(raw ?? '').replace(/\s/g, '').replace(',', '.'));
-    return Number.isFinite(num) && num > 0 ? num : 0;
-  },
-  sum(list, key = 'amount') {
-    const safe = Array.isArray(list) ? list : [];
-    return safe.reduce((t, it) => t + this.toNumber(it[key]), 0);
-  },
+  toNumber(raw) { const num = parseFloat(String(raw ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(num) && num > 0 ? num : 0; },
+  sum(list, key = 'amount') { const safe = Array.isArray(list) ? list : []; return safe.reduce((t, it) => t + this.toNumber(it[key]), 0); },
   calcBudget(data) {
     const totalIncome = this.sum(data.incomes);
     const breakdown = { credits: this.sum(data.credits), family: this.sum(data.family), utils: this.sum(data.utils), other: this.sum(data.other) };
@@ -550,142 +212,41 @@ const Calculator = {
     loadPercent = Math.min(loadPercent, 999);
     return { totalIncome, totalExpenses, freeBalance, loadPercent, breakdown, statusKey: this.getStatusKey(loadPercent, freeBalance) };
   },
-  getStatusKey(percent, freeBalance) {
-    if (freeBalance < 0) return 'deficit';
-    if (percent < 30) return 'comfortable';
-    if (percent < 50) return 'moderate';
-    if (percent < 70) return 'tense';
-    return 'critical';
-  },
+  getStatusKey(percent, freeBalance) { if (freeBalance < 0) return 'deficit'; if (percent < 30) return 'comfortable'; if (percent < 50) return 'moderate'; if (percent < 70) return 'tense'; return 'critical'; },
 };
 
 /* ================= 2. СОСТОЯНИЕ ================= */
 const BudgetState = {
-  data: { incomes: [], credits: [], family: [], utils: [], other: [] },
-  _seq: 0,
-  SECTIONS: ['incomes', 'credits', 'family', 'utils', 'other'],
-  _today() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  },
-  blankItem(section) {
-    const date = this._today();
-    if (section === 'family') return { name: '', amount: '', icon: 'fa-star', date, repeat: false };
-    if (section === 'other')  return { name: '', amount: '', icon: 'fa-tag',  date, repeat: false };
-    if (section === 'utils')  return { service: '', property: '', amount: '', date, repeat: false };
-    return { name: '', amount: '', date, repeat: false };
-  },
-  add(section, fields) {
-    const item = Object.assign({ id: ++this._seq }, fields);
-    this.data[section].push(item);
-    return item;
-  },
-  inject(section, item) {
-    const c = { ...item };
-    this.data[section].push(c);
-    this._seq = Math.max(this._seq, c.id || 0);
-  },
+  data: { incomes: [], credits: [], family: [], utils: [], other: [] }, _seq: 0, SECTIONS: ['incomes', 'credits', 'family', 'utils', 'other'],
+  _today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; },
+  blankItem(section) { const date = this._today(); if (section === 'family') return { name: '', amount: '', icon: 'fa-star', date, repeat: false }; if (section === 'other') return { name: '', amount: '', icon: 'fa-tag', date, repeat: false }; if (section === 'utils') return { service: '', property: '', amount: '', date, repeat: false }; return { name: '', amount: '', date, repeat: false }; },
+  add(section, fields) { const item = Object.assign({ id: ++this._seq }, fields); this.data[section].push(item); return item; },
+  inject(section, item) { const c = { ...item }; this.data[section].push(c); this._seq = Math.max(this._seq, c.id || 0); },
   remove(section, id) { this.data[section] = this.data[section].filter((i) => i.id !== id); },
-  setField(section, id, key, value) {
-    const item = this.data[section].find((i) => i.id === id);
-    if (item) item[key] = value;
-  },
+  setField(section, id, key, value) { const item = this.data[section].find((i) => i.id === id); if (item) item[key] = value; },
   get(section) { return this.data[section]; },
-  seedEmpty() {
-    this.clearAll();
-    this.SECTIONS.forEach((s) => this.add(s, this.blankItem(s)));
-  },
-  clearAll() {
-    this.data = { incomes: [], credits: [], family: [], utils: [], other: [] };
-    this._seq = 0;
-  },
-  load(data) {
-    this.clearAll();
-    let maxId = 0;
-    this.SECTIONS.forEach((sec) => {
-      this.data[sec] = (data[sec] || []).map((it) => { const c = { ...it }; maxId = Math.max(maxId, c.id || 0); return c; });
-    });
-    this._seq = maxId;
-  },
-  snapshot() {
-    const copy = {};
-    this.SECTIONS.forEach((sec) => {
-      copy[sec] = this.data[sec].filter((it) => !it.inherited).map((it) => {
-        const c = { ...it }; delete c.inherited; delete c.anchorKey; return c;
-      });
-    });
-    return copy;
-  },
-  hasValues() {
-    return this.SECTIONS.some((sec) => this.data[sec].some((it) =>
-      Calculator.toNumber(it.amount) > 0 || (it.name || '').trim() !== '' || (it.service || '').trim() !== ''));
-  },
+  seedEmpty() { this.clearAll(); this.SECTIONS.forEach((s) => this.add(s, this.blankItem(s))); },
+  clearAll() { this.data = { incomes: [], credits: [], family: [], utils: [], other: [] }; this._seq = 0; },
+  load(data) { this.clearAll(); let maxId = 0; this.SECTIONS.forEach((sec) => { this.data[sec] = (data[sec] || []).map((it) => { const c = { ...it }; maxId = Math.max(maxId, c.id || 0); return c; }); }); this._seq = maxId; },
+  snapshot() { const copy = {}; this.SECTIONS.forEach((sec) => { copy[sec] = this.data[sec].filter((it) => !it.inherited).map((it) => { const c = { ...it }; delete c.inherited; delete c.anchorKey; return c; }); }); return copy; },
+  hasValues() { return this.SECTIONS.some((sec) => this.data[sec].some((it) => Calculator.toNumber(it.amount) > 0 || (it.name || '').trim() !== '' || (it.service || '').trim() !== '')); },
 };
 
 /* ===== 3. ХРАНИЛИЩЕ ===== */
 const Storage = (() => {
   'use strict';
-  const KEY = 'family-budget:v1';
-  let memoryBackup = null;
-
-  function read() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) { const db = JSON.parse(raw); if (db && db.months) return db; }
-    } catch (e) {}
-    return memoryBackup || { months: {} };
-  }
-  function write(db) {
-    memoryBackup = db;
-    try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
-  }
+  const KEY = 'family-budget:v1'; let memoryBackup = null;
+  function read() { try { const raw = localStorage.getItem(KEY); if (raw) { const db = JSON.parse(raw); if (db && db.months) return db; } } catch (e) {} return memoryBackup || { months: {} }; }
+  function write(db) { memoryBackup = db; try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const keyFor = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-
-  function monthLabel(key) {
-    const [y, m] = key.split('-').map(Number);
-    const label = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1));
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  }
-  function saveMonth(monthKey, data) {
-    const db = read();
-    db.months[monthKey] = { data: copy(data), savedAt: new Date().toISOString() };
-    write(db);
-  }
-  function getMonth(monthKey) {
-    const rec = read().months[monthKey];
-    return rec ? copy(rec.data) : null;
-  }
-  function removeMonth(monthKey) {
-    const db = read(); delete db.months[monthKey]; write(db);
-  }
-  function listEntries() {
-    const db = read();
-    return Object.entries(db.months)
-      .map(([key, rec]) => ({ key, savedAt: rec.savedAt, data: rec.data }))
-      .sort((a, b) => (a.key < b.key ? 1 : -1));
-  }
-  function patchEntry(section, id, patch) {
-    const db = read();
-    for (const key in db.months) {
-      const list = db.months[key].data && db.months[key].data[section];
-      if (!Array.isArray(list)) continue;
-      const item = list.find((i) => i.id === id);
-      if (item) { Object.assign(item, patch); write(db); return key; }
-    }
-    return null;
-  }
-  return { 
-  keyFor, 
-  monthLabel, 
-  saveMonth, 
-  getMonth, 
-  removeMonth, 
-  listEntries, 
-  patchEntry,
-  read,   // <-- Добавлено для импорта
-  write   // <-- Добавлено для импорта
-};
+  function monthLabel(key) { const [y, m] = key.split('-').map(Number); const label = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1)); return label.charAt(0).toUpperCase() + label.slice(1); }
+  function saveMonth(monthKey, data) { const db = read(); db.months[monthKey] = { data: copy(data), savedAt: new Date().toISOString() }; write(db); }
+  function getMonth(monthKey) { const rec = read().months[monthKey]; return rec ? copy(rec.data) : null; }
+  function removeMonth(monthKey) { const db = read(); delete db.months[monthKey]; write(db); }
+  function listEntries() { const db = read(); return Object.entries(db.months).map(([key, rec]) => ({ key, savedAt: rec.savedAt, data: rec.data })).sort((a, b) => (a.key < b.key ? 1 : -1)); }
+  function patchEntry(section, id, patch) { const db = read(); for (const key in db.months) { const list = db.months[key].data && db.months[key].data[section]; if (!Array.isArray(list)) continue; const item = list.find((i) => i.id === id); if (item) { Object.assign(item, patch); write(db); return key; } } return null; }
+  return { keyFor, monthLabel, saveMonth, getMonth, removeMonth, listEntries, patchEntry, read, write };
 })();
 
 /* ================= 4. ПОВТОРЯЮЩИЕСЯ ЗАПИСИ ================= */
@@ -693,69 +254,25 @@ const Recurring = (() => {
   'use strict';
   const emptyData = () => ({ incomes: [], credits: [], family: [], utils: [], other: [] });
   const currentKey = () => (window.AppState ? AppState.currentKey : Storage.keyFor(new Date()));
-
-  function shiftDate(dateStr, targetKey) {
-    const day = Number(String(dateStr).slice(8, 10)) || 1;
-    const [y, m] = targetKey.split('-').map(Number);
-    const dim = new Date(y, m, 0).getDate();
-    return `${targetKey}-${String(Math.min(day, dim)).padStart(2, '0')}`;
-  }
+  function shiftDate(dateStr, targetKey) { const day = Number(String(dateStr).slice(8, 10)) || 1; const [y, m] = targetKey.split('-').map(Number); const dim = new Date(y, m, 0).getDate(); return `${targetKey}-${String(Math.min(day, dim)).padStart(2, '0')}`; }
   function collectFor(targetKey) {
     const out = [];
-    const pushFrom = (data, anchorKey) => {
-      BudgetState.SECTIONS.forEach((sec) => {
-        (data[sec] || []).forEach((it) => {
-          if (it.repeat && !it.inherited) {
-            out.push({ section: sec, item: { ...it, inherited: true, anchorKey, date: shiftDate(it.date, targetKey) } });
-          }
-        });
-      });
-    };
-    Storage.listEntries().forEach((en) => {
-      if (en.key >= targetKey) return;
-      if (en.key === currentKey()) return;
-      pushFrom(en.data, en.key);
-    });
-    if (currentKey() < targetKey) {
-      const live = {};
-      BudgetState.SECTIONS.forEach((sec) => { live[sec] = BudgetState.get(sec); });
-      pushFrom(live, currentKey());
-    }
+    const pushFrom = (data, anchorKey) => { BudgetState.SECTIONS.forEach((sec) => { (data[sec] || []).forEach((it) => { if (it.repeat && !it.inherited) { out.push({ section: sec, item: { ...it, inherited: true, anchorKey, date: shiftDate(it.date, targetKey) } }); } }); }); };
+    Storage.listEntries().forEach((en) => { if (en.key >= targetKey) return; if (en.key === currentKey()) return; pushFrom(en.data, en.key); });
+    if (currentKey() < targetKey) { const live = {}; BudgetState.SECTIONS.forEach((sec) => { live[sec] = BudgetState.get(sec); }); pushFrom(live, currentKey()); }
     return out;
   }
-  function mergedData(targetKey) {
-    if (targetKey === currentKey()) return BudgetState.data;
-    const base = Storage.getMonth(targetKey) || emptyData();
-    const copy = {};
-    BudgetState.SECTIONS.forEach((sec) => { copy[sec] = (base[sec] || []).map((it) => ({ ...it })); });
-    collectFor(targetKey).forEach(({ section, item }) => copy[section].push(item));
-    return copy;
-  }
-  function stopRepeat(section, id) {
-    BudgetState.remove(section, id);
-    return Storage.patchEntry(section, id, { repeat: false });
-  }
+  function mergedData(targetKey) { if (targetKey === currentKey()) return BudgetState.data; const base = Storage.getMonth(targetKey) || emptyData(); const copy = {}; BudgetState.SECTIONS.forEach((sec) => { copy[sec] = (base[sec] || []).map((it) => ({ ...it })); }); collectFor(targetKey).forEach(({ section, item }) => copy[section].push(item)); return copy; }
+  function stopRepeat(section, id) { BudgetState.remove(section, id); return Storage.patchEntry(section, id, { repeat: false }); }
   return { collectFor, mergedData, stopRepeat };
 })();
 
 /* ================= 5. UI ================= */
 const UI = (() => {
   'use strict';
-  const STATUS = {
-    comfortable: { label: 'Комфортно',  icon: 'fa-circle-check',         chip: 'border-emerald-300/25 bg-emerald-400/10 text-emerald-300', bar: 'from-emerald-400 to-teal-300', accent: 'text-emerald-300', msg: 'Нагрузка низкая — бюджет устойчив.' },
-    moderate:    { label: 'Умеренно',   icon: 'fa-circle-half-stroke',   chip: 'border-amber-300/25 bg-amber-300/10 text-amber-300',       bar: 'from-amber-300 to-yellow-200', accent: 'text-amber-300',   msg: 'Платежи ощутимы, но под контролем.' },
-    tense:       { label: 'Напряжённо', icon: 'fa-triangle-exclamation', chip: 'border-orange-300/25 bg-orange-400/10 text-orange-300',    bar: 'from-orange-400 to-amber-300', accent: 'text-orange-300',  msg: 'Обязательные платежи забирают больше половины дохода.' },
-    critical:    { label: 'Критично',   icon: 'fa-circle-exclamation',   chip: 'border-rose-300/25 bg-rose-400/10 text-rose-300',          bar: 'from-rose-500 to-red-400',     accent: 'text-rose-300',    msg: 'Почти весь доход уходит на обязательства.' },
-    deficit:     { label: 'Дефицит',    icon: 'fa-circle-xmark',         chip: 'border-rose-400/30 bg-rose-500/15 text-rose-300',          bar: 'from-rose-500 to-red-500',     accent: 'text-rose-300',    msg: 'Расходы превышают доход — бюджет в минусе.' },
-  };
+  const STATUS = { comfortable: { label: 'Комфортно', icon: 'fa-circle-check', chip: 'border-emerald-300/25 bg-emerald-400/10 text-emerald-300', bar: 'from-emerald-400 to-teal-300', accent: 'text-emerald-300', msg: 'Нагрузка низкая — бюджет устойчив.' }, moderate: { label: 'Умеренно', icon: 'fa-circle-half-stroke', chip: 'border-amber-300/25 bg-amber-300/10 text-amber-300', bar: 'from-amber-300 to-yellow-200', accent: 'text-amber-300', msg: 'Платежи ощутимы, но под контролем.' }, tense: { label: 'Напряжённо', icon: 'fa-triangle-exclamation', chip: 'border-orange-300/25 bg-orange-400/10 text-orange-300', bar: 'from-orange-400 to-amber-300', accent: 'text-orange-300', msg: 'Обязательные платежи забирают больше половины дохода.' }, critical: { label: 'Критично', icon: 'fa-circle-exclamation', chip: 'border-rose-300/25 bg-rose-400/10 text-rose-300', bar: 'from-rose-500 to-red-400', accent: 'text-rose-300', msg: 'Почти весь доход уходит на обязательства.' }, deficit: { label: 'Дефицит', icon: 'fa-circle-xmark', chip: 'border-rose-400/30 bg-rose-500/15 text-rose-300', bar: 'from-rose-500 to-red-500', accent: 'text-rose-300', msg: 'Расходы превышают доход — бюджет в минусе.' } };
   const ICONS = ['fa-star','fa-baby','fa-book','fa-utensils','fa-shirt','fa-car','fa-house-medical','fa-heart-pulse','fa-dumbbell','fa-gamepad','fa-paw','fa-gift','fa-plane','fa-mobile-screen','fa-music','fa-cart-shopping'];
-  const SECTIONS = {
-    incomes: { list: 'listIncomes', empty: 'emptyIncomes', sum: 'sumIncomes', tpl: 'tplIncome' },
-    credits: { list: 'listCredits', empty: 'emptyCredits', sum: 'sumCredits', tpl: 'tplCredit' },
-    family:  { list: 'listFamily',  empty: 'emptyFamily',  sum: 'sumFamily',  tpl: 'tplFamily' },
-    utils:   { list: 'listUtils',   empty: 'emptyUtils',   sum: 'sumUtils',   tpl: 'tplUtil' },
-    other:   { list: 'listOther',   empty: 'emptyOther',   sum: 'sumOther',   tpl: 'tplOther' },
-  };
+  const SECTIONS = { incomes: { list: 'listIncomes', empty: 'emptyIncomes', sum: 'sumIncomes', tpl: 'tplIncome' }, credits: { list: 'listCredits', empty: 'emptyCredits', sum: 'sumCredits', tpl: 'tplCredit' }, family: { list: 'listFamily', empty: 'emptyFamily', sum: 'sumFamily', tpl: 'tplFamily' }, utils: { list: 'listUtils', empty: 'emptyUtils', sum: 'sumUtils', tpl: 'tplUtil' }, other: { list: 'listOther', empty: 'emptyOther', sum: 'sumOther', tpl: 'tplOther' } };
   const nf = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
   const fmtMoney = (v) => nf.format(Math.round(v)) + ' ₽';
   const $ = (id) => document.getElementById(id);
@@ -763,275 +280,102 @@ const UI = (() => {
 
   function buildRow(section, item) {
     const node = $(SECTIONS[section].tpl).content.firstElementChild.cloneNode(true);
-    node.dataset.id = item.id;
-    node.dataset.section = section;
+    node.dataset.id = item.id; node.dataset.section = section;
     const fill = (sel, value) => { const el = node.querySelector(sel); if (el) el.value = value || ''; };
-    fill('.row-name', item.name); fill('.row-amount', item.amount);
-    fill('.row-service', item.service); fill('.row-property', item.property);
-    fill('.row-date', item.date);
-    const icon = node.querySelector('.icon-btn i');
-    if (icon) icon.className = 'fa-solid ' + (item.icon || 'fa-star');
-    const chk = node.querySelector('.row-repeat');
-    if (chk) chk.checked = !!item.repeat;
-    const chip = node.querySelector('.repeat-note');
-    if (chip && item.repeat) { chip.classList.remove('hidden'); chip.classList.add('inline-flex'); }
+    fill('.row-name', item.name); fill('.row-amount', item.amount); fill('.row-service', item.service); fill('.row-property', item.property); fill('.row-date', item.date);
+    const icon = node.querySelector('.icon-btn i'); if (icon) icon.className = 'fa-solid ' + (item.icon || 'fa-star');
+    const chk = node.querySelector('.row-repeat'); if (chk) chk.checked = !!item.repeat;
+    const chip = node.querySelector('.repeat-note'); if (chip && item.repeat) { chip.classList.remove('hidden'); chip.classList.add('inline-flex'); }
     if (item.inherited) {
-      node.classList.add('opacity-80');
-      node.querySelectorAll('input').forEach((i) => { i.disabled = true; });
+      node.classList.add('opacity-80'); node.querySelectorAll('input').forEach((i) => { i.disabled = true; });
       if (chip && item.anchorKey) chip.title = `Создано в: ${Storage.monthLabel(item.anchorKey)}`;
-      const rm = node.querySelector('.row-remove');
-      if (rm) {
-        rm.classList.remove('row-remove'); rm.classList.add('row-stop');
-        rm.title = 'Остановить повторение';
-        rm.innerHTML = '<i class="fa-solid fa-ban text-sm"></i>';
-      }
+      const rm = node.querySelector('.row-remove'); if (rm) { rm.classList.remove('row-remove'); rm.classList.add('row-stop'); rm.title = 'Остановить повторение'; rm.innerHTML = '<i class="fa-solid fa-ban text-sm"></i>'; }
     }
     return node;
   }
-  function renderList(section) {
-    const cfg = SECTIONS[section];
-    const items = BudgetState.get(section);
-    const box = $(cfg.list);
-    box.innerHTML = '';
-    items.forEach((it) => box.appendChild(buildRow(section, it)));
-    $(cfg.empty).classList.toggle('hidden', items.length > 0);
-    updateSum(section);
-  }
+  function renderList(section) { const cfg = SECTIONS[section]; const items = BudgetState.get(section); const box = $(cfg.list); box.innerHTML = ''; items.forEach((it) => box.appendChild(buildRow(section, it))); $(cfg.empty).classList.toggle('hidden', items.length > 0); updateSum(section); }
   const renderAll = () => Object.keys(SECTIONS).forEach(renderList);
   const updateSum = (section) => { $(SECTIONS[section].sum).textContent = fmtMoney(Calculator.sum(BudgetState.get(section))); };
-  function removeRow(section, id, rowEl) {
-    rowEl.classList.add('row-out');
-    setTimeout(() => { BudgetState.remove(section, id); renderList(section); }, 170);
-  }
-  function focusRow(section, id) {
-    const row = $(SECTIONS[section].list).querySelector(`[data-id="${id}"]`);
-    const input = row && row.querySelector('input:not(:disabled)');
-    if (input) input.focus();
-  }
-  function buildGrid() {
-    const grid = $('iconGrid');
-    ICONS.forEach((ic) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'grid h-11 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-sky-300/40 hover:bg-sky-400/10 hover:text-sky-300 active:scale-90';
-      btn.innerHTML = `<i class="fa-solid ${ic}"></i>`;
-      btn.addEventListener('click', () => applyIcon(ic));
-      grid.appendChild(btn);
-    });
-  }
-  function openPicker(section, id, rowEl) {
-    picker = { section, id, rowEl };
-    $('iconSheet').classList.remove('hidden');
-    requestAnimationFrame(() => $('iconPanel').classList.add('sheet-open'));
-  }
-  function closePicker() {
-    picker = null;
-    $('iconPanel').classList.remove('sheet-open');
-    setTimeout(() => $('iconSheet').classList.add('hidden'), 280);
-  }
-  function applyIcon(icon) {
-    if (!picker) return;
-    BudgetState.setField(picker.section, picker.id, 'icon', icon);
-    const i = picker.rowEl.querySelector('.icon-btn i');
-    if (i) i.className = 'fa-solid ' + icon;
-    closePicker();
-  }
+  function removeRow(section, id, rowEl) { rowEl.classList.add('row-out'); setTimeout(() => { BudgetState.remove(section, id); renderList(section); }, 170); }
+  function focusRow(section, id) { const row = $(SECTIONS[section].list).querySelector(`[data-id="${id}"]`); const input = row && row.querySelector('input:not(:disabled)'); if (input) input.focus(); }
+  function buildGrid() { const grid = $('iconGrid'); ICONS.forEach((ic) => { const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'grid h-11 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-sky-300/40 hover:bg-sky-400/10 hover:text-sky-300 active:scale-90'; btn.innerHTML = `<i class="fa-solid ${ic}"></i>`; btn.addEventListener('click', () => applyIcon(ic)); grid.appendChild(btn); }); }
+  function openPicker(section, id, rowEl) { picker = { section, id, rowEl }; $('iconSheet').classList.remove('hidden'); requestAnimationFrame(() => $('iconPanel').classList.add('sheet-open')); }
+  function closePicker() { picker = null; $('iconPanel').classList.remove('sheet-open'); setTimeout(() => $('iconSheet').classList.add('hidden'), 280); }
+  function applyIcon(icon) { if (!picker) return; BudgetState.setField(picker.section, picker.id, 'icon', icon); const i = picker.rowEl.querySelector('.icon-btn i'); if (i) i.className = 'fa-solid ' + icon; closePicker(); }
   const TOAST_BASE = 'pointer-events-none absolute left-1/2 top-14 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border bg-[#0e1522]/95 px-4 py-2 text-xs font-bold shadow-xl shadow-black/40 transition-all duration-300 ';
   const TOAST_TONES = { ok: 'border-emerald-300/30 text-emerald-300', warn: 'border-amber-300/30 text-amber-300', err: 'border-rose-300/30 text-rose-300' };
-  function showToast(text, tone = 'ok') {
-    const t = $('toast');
-    t.className = TOAST_BASE + TOAST_TONES[tone];
-    t.textContent = text;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.add('opacity-0', '-translate-y-2'), 2200);
-  }
-  function init() {
-    buildGrid();
-    $('iconBackdrop').addEventListener('click', closePicker);
-    $('iconClose').addEventListener('click', closePicker);
-  }
+  function showToast(text, tone = 'ok') { const t = $('toast'); t.className = TOAST_BASE + TOAST_TONES[tone]; t.textContent = text; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('opacity-0', '-translate-y-2'), 2200); }
+  function init() { buildGrid(); $('iconBackdrop').addEventListener('click', closePicker); $('iconClose').addEventListener('click', closePicker); }
   return { STATUS, SECTIONS, fmtMoney, renderList, renderAll, updateSum, removeRow, focusRow, openPicker, closePicker, showToast, init };
 })();
 
 /* ================= 6. ИТОГИ ================= */
 const History = (() => {
   'use strict';
-  const $ = (id) => document.getElementById(id);
-  let period = 'all';
-
-  function plural(n, [one, few, many]) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-    return many;
-  }
-  function thresholdKey() {
-    const now = new Date();
-    if (period === 'year') return `${now.getFullYear()}-01`;
-    if (period === '6m' || period === '3m') {
-      const n = period === '6m' ? 6 : 3;
-      return Storage.keyFor(new Date(now.getFullYear(), now.getMonth() - (n - 1), 1));
-    }
-    return '0000-01';
-  }
-  function applyChipStyles() {
-    document.querySelectorAll('.period-chip').forEach((b) => {
-      const on = b.dataset.period === period;
-      b.className = 'period-chip rounded-xl py-2 text-[10px] font-bold transition ' + (on ? 'bg-white/[0.06] text-emerald-300' : 'text-slate-500');
-    });
-  }
+  const $ = (id) => document.getElementById(id); let period = 'all';
+  function plural(n, [one, few, many]) { const m10 = n % 10, m100 = n % 100; if (m10 === 1 && m100 !== 11) return one; if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few; return many; }
+  function thresholdKey() { const now = new Date(); if (period === 'year') return `${now.getFullYear()}-01`; if (period === '6m' || period === '3m') { const n = period === '6m' ? 6 : 3; return Storage.keyFor(new Date(now.getFullYear(), now.getMonth() - (n - 1), 1)); } return '0000-01'; }
+  function applyChipStyles() { document.querySelectorAll('.period-chip').forEach((b) => { const on = b.dataset.period === period; b.className = 'period-chip rounded-xl py-2 text-[10px] font-bold transition ' + (on ? 'bg-white/[0.06] text-emerald-300' : 'text-slate-500'); }); }
   function render() {
-    applyChipStyles();
-    const min = thresholdKey();
-    const entries = Storage.listEntries().filter((en) => en.key >= min);
-    $('historyEmpty').classList.toggle('hidden', entries.length > 0);
-    $('periodStats').classList.toggle('hidden', entries.length === 0);
+    applyChipStyles(); const min = thresholdKey(); const entries = Storage.listEntries().filter((en) => en.key >= min);
+    $('historyEmpty').classList.toggle('hidden', entries.length > 0); $('periodStats').classList.toggle('hidden', entries.length === 0);
     $('periodCount').textContent = entries.length ? `Сохранённых месяцев: ${entries.length}` : '';
-
     let totalIncome = 0, totalExpenses = 0;
-    entries.forEach((en) => {
-      const data = Recurring.mergedData(en.key);
-      totalIncome += Calculator.sum(data.incomes);
-      totalExpenses += Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other);
-    });
-    $('pIncome').textContent = entries.length ? UI.fmtMoney(totalIncome) : '—';
-    $('pExpenses').textContent = entries.length ? UI.fmtMoney(totalExpenses) : '—';
+    entries.forEach((en) => { const data = Recurring.mergedData(en.key); totalIncome += Calculator.sum(data.incomes); totalExpenses += Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other); });
+    $('pIncome').textContent = entries.length ? UI.fmtMoney(totalIncome) : '—'; $('pExpenses').textContent = entries.length ? UI.fmtMoney(totalExpenses) : '—';
     $('pLoad').textContent = totalIncome > 0 ? Math.round(totalExpenses / totalIncome * 100) + '%' : '—';
-
-    const list = $('historyList');
-    list.innerHTML = '';
+    const list = $('historyList'); list.innerHTML = '';
     entries.forEach((en) => {
-      const data = Recurring.mergedData(en.key);
-      const res = Calculator.calcBudget(data);
-      const s = UI.STATUS[res.statusKey];
-      const node = $('tplHistory').content.firstElementChild.cloneNode(true);
-      node.dataset.month = en.key;
+      const data = Recurring.mergedData(en.key); const res = Calculator.calcBudget(data); const s = UI.STATUS[res.statusKey];
+      const node = $('tplHistory').content.firstElementChild.cloneNode(true); node.dataset.month = en.key;
       node.querySelector('.h-month').textContent = Storage.monthLabel(en.key);
       const count = (data.incomes || []).length + (data.credits || []).length + (data.family || []).length + (data.utils || []).length + (data.other || []).length;
       node.querySelector('.h-count').textContent = `${count} ${plural(count, ['пункт', 'пункта', 'пунктов'])} · сохранено ${new Date(en.savedAt).toLocaleDateString('ru-RU')}`;
-      const chip = node.querySelector('.h-chip');
-      chip.className = 'h-chip inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ' + s.chip;
+      const chip = node.querySelector('.h-chip'); chip.className = 'h-chip inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ' + s.chip;
       chip.innerHTML = `<i class="fa-solid ${s.icon}"></i> ${Math.round(res.loadPercent)}%`;
-      node.querySelector('.h-income').textContent = UI.fmtMoney(res.totalIncome);
-      node.querySelector('.h-expenses').textContent = UI.fmtMoney(res.totalExpenses);
-      const free = node.querySelector('.h-free');
-      free.textContent = UI.fmtMoney(res.freeBalance);
-      free.classList.add(res.freeBalance >= 0 ? 'text-emerald-300' : 'text-rose-300');
-      const bar = node.querySelector('.h-bar');
-      bar.className = 'h-bar h-full rounded-full bg-gradient-to-r ' + s.bar;
-      bar.style.width = Math.min(res.loadPercent, 100) + '%';
+      node.querySelector('.h-income').textContent = UI.fmtMoney(res.totalIncome); node.querySelector('.h-expenses').textContent = UI.fmtMoney(res.totalExpenses);
+      const free = node.querySelector('.h-free'); free.textContent = UI.fmtMoney(res.freeBalance); free.classList.add(res.freeBalance >= 0 ? 'text-emerald-300' : 'text-rose-300');
+      const bar = node.querySelector('.h-bar'); bar.className = 'h-bar h-full rounded-full bg-gradient-to-r ' + s.bar; bar.style.width = Math.min(res.loadPercent, 100) + '%';
       list.appendChild(node);
     });
   }
-  function init() {
-    document.querySelectorAll('.period-chip').forEach((btn) => {
-      btn.addEventListener('click', () => { period = btn.dataset.period; render(); });
-    });
-  }
+  function init() { document.querySelectorAll('.period-chip').forEach((btn) => { btn.addEventListener('click', () => { period = btn.dataset.period; render(); }); }); }
   return { init, render };
 })();
 
 /* ================= 7. РЕДАКТОР ДНЯ ================= */
 const DayEditor = (() => {
   'use strict';
-  const $ = (id) => document.getElementById(id);
-  let openDay = null, openKey = null, preferredSec = 'other', onChange = null;
-
-  const CAT_OPTIONS = [
-    { value: 'incomes', label: 'Доход' }, { value: 'credits', label: 'Кредит' },
-    { value: 'family', label: 'Семья' }, { value: 'utils', label: 'ЖКХ' }, { value: 'other', label: 'Иное' },
-  ];
+  const $ = (id) => document.getElementById(id); let openDay = null, openKey = null, preferredSec = 'other', onChange = null;
+  const CAT_OPTIONS = [{ value: 'incomes', label: 'Доход' }, { value: 'credits', label: 'Кредит' }, { value: 'family', label: 'Семья' }, { value: 'utils', label: 'ЖКХ' }, { value: 'other', label: 'Иное' }];
   const escapeAttr = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const dateStr = () => `${openKey}-${String(openDay).padStart(2, '0')}`;
-
-  function itemsForDay() {
-    const out = [];
-    BudgetState.SECTIONS.forEach((sec) => {
-      BudgetState.get(sec).forEach((it) => { if (it.date === dateStr()) out.push({ sec, it }); });
-    });
-    return out;
-  }
+  function itemsForDay() { const out = []; BudgetState.SECTIONS.forEach((sec) => { BudgetState.get(sec).forEach((it) => { if (it.date === dateStr()) out.push({ sec, it }); }); }); return out; }
   const fire = () => { if (onChange) onChange(); };
-
   function moveItem(fromSec, id, toSec) {
-    if (fromSec === toSec) return;
-    const item = BudgetState.get(fromSec).find((i) => i.id === id);
-    if (!item) return;
-    BudgetState.remove(fromSec, id);
-    const moved = { ...item };
-    const label = moved.name || moved.service || '';
+    if (fromSec === toSec) return; const item = BudgetState.get(fromSec).find((i) => i.id === id); if (!item) return;
+    BudgetState.remove(fromSec, id); const moved = { ...item }; const label = moved.name || moved.service || '';
     if (toSec === 'utils') { moved.service = label; moved.property = moved.property || ''; delete moved.name; delete moved.icon; }
     else if (toSec === 'family' || toSec === 'other') { moved.name = label; if (!moved.icon) moved.icon = toSec === 'family' ? 'fa-star' : 'fa-tag'; delete moved.service; delete moved.property; }
     else { moved.name = label; delete moved.icon; delete moved.service; delete moved.property; }
-    BudgetState.inject(toSec, moved);
-    fire(); renderList();
+    BudgetState.inject(toSec, moved); fire(); renderList();
   }
-
   function renderList() {
-    const box = $('dayEditList');
-    box.innerHTML = '';
-    const items = itemsForDay();
-    if (!items.length) {
-      box.innerHTML = '<p class="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-600">Записей нет — добавьте первую</p>';
-      return;
-    }
+    const box = $('dayEditList'); box.innerHTML = ''; const items = itemsForDay();
+    if (!items.length) { box.innerHTML = '<p class="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-600">Записей нет — добавьте первую</p>'; return; }
     items.forEach(({ sec, it }) => {
-      const ro = !!it.inherited;
-      const label = sec === 'utils' ? (it.service || '') : (it.name || '');
-      const row = document.createElement('div');
-      row.className = 'rounded-xl border border-white/10 bg-white/[0.03] p-2.5' + (ro ? ' opacity-70' : '');
-      row.innerHTML = `
-        <div class="flex items-center gap-2">
-          <select class="de-cat h-9 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-slate-200 outline-none" ${ro ? 'disabled' : ''}>
-            ${CAT_OPTIONS.map((o) => `<option value="${o.value}" ${o.value === sec ? 'selected' : ''}>${o.label}</option>`).join('')}
-          </select>
-          <input class="de-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 h-9 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600" value="${escapeAttr(label)}" placeholder="Название" ${ro ? 'disabled' : ''}>
-          <button type="button" class="de-del grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90" ${ro ? 'disabled' : ''}><i class="fa-solid fa-trash-can text-xs"></i></button>
-        </div>
-        <div class="mt-2 flex items-center gap-2">
-          <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Сумма</span>
-          <input class="de-amount h-9 w-28 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:text-slate-600" inputmode="decimal" value="${escapeAttr(it.amount || '')}" placeholder="0" ${ro ? 'disabled' : ''}>
-          <span class="text-sm text-slate-500">₽</span>
-          ${ro ? `<span class="ml-auto text-[9px] font-medium text-slate-500"><i class="fa-solid fa-lock mr-1"></i>повтор из «${Storage.monthLabel(it.anchorKey)}»</span>` : ''}
-        </div>`;
-      if (!ro) {
-        row.querySelector('.de-cat').addEventListener('change', (e) => moveItem(sec, it.id, e.target.value));
-        row.querySelector('.de-name').addEventListener('input', (e) => { BudgetState.setField(sec, it.id, sec === 'utils' ? 'service' : 'name', e.target.value); fire(); });
-        row.querySelector('.de-amount').addEventListener('input', (e) => { BudgetState.setField(sec, it.id, 'amount', e.target.value); fire(); });
-        row.querySelector('.de-del').addEventListener('click', () => { BudgetState.remove(sec, it.id); fire(); renderList(); });
-      }
+      const ro = !!it.inherited; const label = sec === 'utils' ? (it.service || '') : (it.name || '');
+      const row = document.createElement('div'); row.className = 'rounded-xl border border-white/10 bg-white/[0.03] p-2.5' + (ro ? ' opacity-70' : '');
+      row.innerHTML = `<div class="flex items-center gap-2"><select class="de-cat h-9 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-slate-200 outline-none" ${ro ? 'disabled' : ''}>${CAT_OPTIONS.map((o) => `<option value="${o.value}" ${o.value === sec ? 'selected' : ''}>${o.label}</option>`).join('')}</select><input class="de-name min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 h-9 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-600" value="${escapeAttr(label)}" placeholder="Название" ${ro ? 'disabled' : ''}><button type="button" class="de-del grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-rose-400/10 hover:text-rose-300 active:scale-90" ${ro ? 'disabled' : ''}><i class="fa-solid fa-trash-can text-xs"></i></button></div><div class="mt-2 flex items-center gap-2"><span class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Сумма</span><input class="de-amount h-9 w-28 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-right text-sm font-bold text-slate-100 outline-none transition placeholder:text-slate-600" inputmode="decimal" value="${escapeAttr(it.amount || '')}" placeholder="0" ${ro ? 'disabled' : ''}><span class="text-sm text-slate-500">₽</span>${ro ? `<span class="ml-auto text-[9px] font-medium text-slate-500"><i class="fa-solid fa-lock mr-1"></i>повтор из «${Storage.monthLabel(it.anchorKey)}»</span>` : ''}</div>`;
+      if (!ro) { row.querySelector('.de-cat').addEventListener('change', (e) => moveItem(sec, it.id, e.target.value)); row.querySelector('.de-name').addEventListener('input', (e) => { BudgetState.setField(sec, it.id, sec === 'utils' ? 'service' : 'name', e.target.value); fire(); }); row.querySelector('.de-amount').addEventListener('input', (e) => { BudgetState.setField(sec, it.id, 'amount', e.target.value); fire(); }); row.querySelector('.de-del').addEventListener('click', () => { BudgetState.remove(sec, it.id); fire(); renderList(); }); }
       box.appendChild(row);
     });
   }
-  function open(day, key, preferred) {
-    openDay = day; openKey = key; preferredSec = preferred || 'other';
-    const [y, m] = key.split('-').map(Number);
-    $('dayEditTitle').textContent = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(y, m - 1, day));
-    renderList();
-    $('daySheet').classList.remove('hidden');
-    requestAnimationFrame(() => $('dayPanel').classList.add('sheet-open'));
-  }
-  function close() {
-    UI.renderAll();
-    $('dayPanel').classList.remove('sheet-open');
-    setTimeout(() => $('daySheet').classList.add('hidden'), 280);
-  }
-  function add() {
-    BudgetState.add(preferredSec, Object.assign(BudgetState.blankItem(preferredSec), { date: dateStr() }));
-    fire(); renderList();
-  }
-  function save() {
-    fire();
-    if (window.AppSaveMonth) AppSaveMonth();
-    close();
-  }
-  function init(cb) {
-    onChange = cb;
-    $('dayBackdrop').addEventListener('click', close);
-    $('dayEditClose').addEventListener('click', close);
-    $('dayAddBtn').addEventListener('click', add);
-    $('daySaveBtn').addEventListener('click', save);
-  }
+  function open(day, key, preferred) { openDay = day; openKey = key; preferredSec = preferred || 'other'; const [y, m] = key.split('-').map(Number); $('dayEditTitle').textContent = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(y, m - 1, day)); renderList(); $('daySheet').classList.remove('hidden'); requestAnimationFrame(() => $('dayPanel').classList.add('sheet-open')); }
+  function close() { UI.renderAll(); $('dayPanel').classList.remove('sheet-open'); setTimeout(() => $('daySheet').classList.add('hidden'), 280); }
+  function add() { BudgetState.add(preferredSec, Object.assign(BudgetState.blankItem(preferredSec), { date: dateStr() })); fire(); renderList(); }
+  function save() { fire(); if (window.AppSaveMonth) AppSaveMonth(); close(); }
+  function init(cb) { onChange = cb; $('dayBackdrop').addEventListener('click', close); $('dayEditClose').addEventListener('click', close); $('dayAddBtn').addEventListener('click', add); $('daySaveBtn').addEventListener('click', save); }
   return { init, open, close, save };
 })();
 
@@ -1039,787 +383,235 @@ const DayEditor = (() => {
 const CalendarView = (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const CATS = {
-    incomes: { color: 'bg-emerald-400', text: 'text-emerald-300', label: 'Доход',  icon: 'fa-arrow-trend-up',      legendOn: 'border-emerald-300/50 bg-emerald-400/10 text-emerald-200' },
-    credits: { color: 'bg-rose-400',    text: 'text-rose-300',    label: 'Кредит', icon: 'fa-hand-holding-dollar', legendOn: 'border-rose-300/50 bg-rose-400/10 text-rose-200' },
-    family:  { color: 'bg-sky-400',     text: 'text-sky-300',     label: 'Семья',  icon: 'fa-graduation-cap',      legendOn: 'border-sky-300/50 bg-sky-400/10 text-sky-200' },
-    utils:   { color: 'bg-amber-300',   text: 'text-amber-300',   label: 'ЖКХ',    icon: 'fa-bolt',                legendOn: 'border-amber-300/50 bg-amber-300/10 text-amber-200' },
-    other:   { color: 'bg-violet-400',  text: 'text-violet-300',  label: 'Иное',   icon: 'fa-shapes',              legendOn: 'border-violet-300/50 bg-violet-400/10 text-violet-200' },
-  };
-  let viewKey = '', selectedDay = 1, activeCat = null, mode = 'month', weekOffset = 0;
-  let lpTimer = null, lpFired = false;
-
-  function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
+  const CATS = { incomes: { color: 'bg-emerald-400', text: 'text-emerald-300', label: 'Доход', icon: 'fa-arrow-trend-up', legendOn: 'border-emerald-300/50 bg-emerald-400/10 text-emerald-200' }, credits: { color: 'bg-rose-400', text: 'text-rose-300', label: 'Кредит', icon: 'fa-hand-holding-dollar', legendOn: 'border-rose-300/50 bg-rose-400/10 text-rose-200' }, family: { color: 'bg-sky-400', text: 'text-sky-300', label: 'Семья', icon: 'fa-graduation-cap', legendOn: 'border-sky-300/50 bg-sky-400/10 text-sky-200' }, utils: { color: 'bg-amber-300', text: 'text-amber-300', label: 'ЖКХ', icon: 'fa-bolt', legendOn: 'border-amber-300/50 bg-amber-300/10 text-amber-200' }, other: { color: 'bg-violet-400', text: 'text-violet-300', label: 'Иное', icon: 'fa-shapes', legendOn: 'border-violet-300/50 bg-violet-400/10 text-violet-200' } };
+  let viewKey = '', selectedDay = 1, activeCat = null, mode = 'month', weekOffset = 0; let lpTimer = null, lpFired = false;
+  function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
   const realMonthKey = () => Storage.keyFor(new Date());
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  function plural(n, [one, few, many]) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-    return many;
-  }
+  function plural(n, [one, few, many]) { const m10 = n % 10, m100 = n % 100; if (m10 === 1 && m100 !== 11) return one; if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few; return many; }
   const isFilled = (it) => Calculator.toNumber(it.amount) > 0 || ((it.name || it.service || '') + '').trim() !== '';
-
-  function entriesByDay(key) {
-    const data = Recurring.mergedData(key);
-    const map = {};
-    for (const cat in CATS) {
-      (data[cat] || []).forEach((it) => {
-        if (!it.date || !isFilled(it)) return;
-        if (it.date.slice(0, 7) !== key) return;
-        const day = Number(it.date.slice(8, 10));
-        (map[day] = map[day] || []).push({ cat, it });
-      });
-    }
-    return map;
-  }
+  function entriesByDay(key) { const data = Recurring.mergedData(key); const map = {}; for (const cat in CATS) { (data[cat] || []).forEach((it) => { if (!it.date || !isFilled(it)) return; if (it.date.slice(0, 7) !== key) return; const day = Number(it.date.slice(8, 10)); (map[day] = map[day] || []).push({ cat, it }); }); } return map; }
   const dayExpenses = (list) => list.reduce((s, e) => (e.cat !== 'incomes' ? s + Calculator.toNumber(e.it.amount) : s), 0);
   const heatBg = (level) => level <= 0 ? '' : level < 0.35 ? 'rgba(252,211,77,0.14)' : level < 0.7 ? 'rgba(251,146,60,0.22)' : 'rgba(244,63,94,0.28)';
-
-  function openDayEditor(day) {
-    const current = window.AppState ? AppState.currentKey : viewKey;
-    if (viewKey !== current) { UI.showToast('Для редактирования откройте этот месяц в редакторе', 'warn'); return; }
-    DayEditor.open(day, viewKey, activeCat);
-  }
-  function attachLongPress(el, day) {
-    el.addEventListener('pointerdown', () => {
-      lpTimer = setTimeout(() => {
-        lpFired = true;
-        try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
-        openDayEditor(day);
-      }, 550);
-    });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, () => clearTimeout(lpTimer)));
-  }
-  function consumeLongPress() {
-    if (lpFired) { lpFired = false; setTimeout(() => { lpFired = false; }, 400); return true; }
-    return false;
-  }
-
+  function openDayEditor(day) { const current = window.AppState ? AppState.currentKey : viewKey; if (viewKey !== current) { UI.showToast('Для редактирования откройте этот месяц в редакторе', 'warn'); return; } DayEditor.open(day, viewKey, activeCat); }
+  function attachLongPress(el, day) { el.addEventListener('pointerdown', () => { lpTimer = setTimeout(() => { lpFired = true; try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {} openDayEditor(day); }, 550); }); ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => el.addEventListener(ev, () => clearTimeout(lpTimer))); }
+  function consumeLongPress() { if (lpFired) { lpFired = false; setTimeout(() => { lpFired = false; }, 400); return true; } return false; }
   function render() {
-    $('calLabel').textContent = Storage.monthLabel(viewKey);
-    $('calToday').classList.toggle('hidden', viewKey === realMonthKey());
+    $('calLabel').textContent = Storage.monthLabel(viewKey); $('calToday').classList.toggle('hidden', viewKey === realMonthKey());
     $('calModeMonth').className = 'rounded-xl py-2 text-[11px] font-bold transition ' + (mode === 'month' ? 'bg-white/[0.06] text-emerald-300' : 'text-slate-500');
     $('calModeWeek').className = 'rounded-xl py-2 text-[11px] font-bold transition ' + (mode === 'week' ? 'bg-white/[0.06] text-emerald-300' : 'text-slate-500');
-
-    const data = Recurring.mergedData(viewKey);
-    const inc = Calculator.sum(data.incomes);
-    const exp = Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other);
-    $('calIncome').textContent = UI.fmtMoney(inc);
-    $('calExpenses').textContent = UI.fmtMoney(exp);
-    const freeEl = $('calFree');
-    freeEl.textContent = UI.fmtMoney(inc - exp);
-    freeEl.className = 'mt-0.5 text-[13px] font-extrabold ' + (inc - exp >= 0 ? 'text-emerald-300' : 'text-rose-300');
-
-    renderChart(viewKey);
-    const grid = $('calGrid');
-    if (mode === 'month') { grid.className = 'mt-1.5 grid grid-cols-7 gap-1'; renderMonth(); }
-    else { grid.className = 'mt-1.5 flex flex-col gap-2'; renderWeek(); }
-    renderUpcoming();
-    renderDetails();
+    const data = Recurring.mergedData(viewKey); const inc = Calculator.sum(data.incomes); const exp = Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other);
+    $('calIncome').textContent = UI.fmtMoney(inc); $('calExpenses').textContent = UI.fmtMoney(exp);
+    const freeEl = $('calFree'); freeEl.textContent = UI.fmtMoney(inc - exp); freeEl.className = 'mt-0.5 text-[13px] font-extrabold ' + (inc - exp >= 0 ? 'text-emerald-300' : 'text-rose-300');
+    renderChart(viewKey); const grid = $('calGrid'); if (mode === 'month') { grid.className = 'mt-1.5 grid grid-cols-7 gap-1'; renderMonth(); } else { grid.className = 'mt-1.5 flex flex-col gap-2'; renderWeek(); }
+    renderUpcoming(); renderDetails();
   }
-
   function renderMonth() {
-    const [y, m] = viewKey.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-    const byDay = entriesByDay(viewKey);
-    const today = todayISO();
-    let maxExp = 0;
+    const [y, m] = viewKey.split('-').map(Number); const daysInMonth = new Date(y, m, 0).getDate(); const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+    const byDay = entriesByDay(viewKey); const today = todayISO(); let maxExp = 0;
     for (let d = 1; d <= daysInMonth; d++) maxExp = Math.max(maxExp, dayExpenses(byDay[d] || []));
-
-    const grid = $('calGrid');
-    grid.innerHTML = '';
-    for (let i = 0; i < offset; i++) grid.appendChild(document.createElement('span'));
-
+    const grid = $('calGrid'); grid.innerHTML = ''; for (let i = 0; i < offset; i++) grid.appendChild(document.createElement('span'));
     for (let d = 1; d <= daysInMonth; d++) {
-      const full = `${viewKey}-${String(d).padStart(2, '0')}`;
-      const list = byDay[d] || [];
-      const weekend = (offset + d - 1) % 7 >= 5;
-      let dayInc = 0, dayExp = 0;
-      list.forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') dayInc += v; else dayExp += v; });
-      const net = dayInc - dayExp;
-
-      const cell = document.createElement('button');
-      cell.type = 'button';
+      const full = `${viewKey}-${String(d).padStart(2, '0')}`; const list = byDay[d] || []; const weekend = (offset + d - 1) % 7 >= 5;
+      let dayInc = 0, dayExp = 0; list.forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') dayInc += v; else dayExp += v; });
+      const net = dayInc - dayExp; const cell = document.createElement('button'); cell.type = 'button';
       let cls = 'flex h-14 flex-col items-center justify-center rounded-xl transition hover:bg-white/[0.08] active:scale-95';
-      if (weekend) cls += ' bg-white/[0.015]';
-      if (full === today) cls += ' border border-emerald-300/40';
-      if (d === selectedDay) cls += ' ring-1 ring-emerald-300/60';
-      cell.className = cls;
-      const bg = heatBg(maxExp > 0 ? dayExp / maxExp : 0);
-      if (bg) cell.style.backgroundColor = bg;
-
-      let numCls = 'text-sm font-semibold ' + (weekend ? 'text-slate-500' : 'text-slate-300');
-      if (list.length) numCls = 'text-sm font-bold ' + (net > 0 ? 'text-emerald-300' : net < 0 ? 'text-rose-300' : 'text-amber-200');
-
+      if (weekend) cls += ' bg-white/[0.015]'; if (full === today) cls += ' border border-emerald-300/40'; if (d === selectedDay) cls += ' ring-1 ring-emerald-300/60';
+      cell.className = cls; const bg = heatBg(maxExp > 0 ? dayExp / maxExp : 0); if (bg) cell.style.backgroundColor = bg;
+      let numCls = 'text-sm font-semibold ' + (weekend ? 'text-slate-500' : 'text-slate-300'); if (list.length) numCls = 'text-sm font-bold ' + (net > 0 ? 'text-emerald-300' : net < 0 ? 'text-rose-300' : 'text-amber-200');
       const visible = activeCat ? list.filter((e) => e.cat === activeCat) : list;
       const dots = visible.slice(0, 4).map((e) => `<span class="h-1.5 w-1.5 rounded-full ${CATS[e.cat].color}"></span>`).join('');
       const more = visible.length > 4 ? `<span class="text-[8px] leading-none text-slate-500">+${visible.length - 4}</span>` : '';
       cell.innerHTML = `<span class="${numCls}">${d}</span><span class="mt-1 flex h-1.5 items-center gap-0.5">${dots}${more}</span>`;
-      cell.addEventListener('click', () => { if (consumeLongPress()) return; selectedDay = d; render(); });
-      attachLongPress(cell, d);
-      grid.appendChild(cell);
+      cell.addEventListener('click', () => { if (consumeLongPress()) return; selectedDay = d; render(); }); attachLongPress(cell, d); grid.appendChild(cell);
     }
   }
-
   function renderWeek() {
-    const [y, m] = viewKey.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-    const weeks = Math.ceil((offset + daysInMonth) / 7);
-    weekOffset = Math.min(Math.max(weekOffset, 0), weeks - 1);
-    const byDay = entriesByDay(viewKey);
-    const today = todayISO();
-    const box = $('calGrid');
-    box.innerHTML = '';
+    const [y, m] = viewKey.split('-').map(Number); const daysInMonth = new Date(y, m, 0).getDate(); const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+    const weeks = Math.ceil((offset + daysInMonth) / 7); weekOffset = Math.min(Math.max(weekOffset, 0), weeks - 1);
+    const byDay = entriesByDay(viewKey); const today = todayISO(); const box = $('calGrid'); box.innerHTML = '';
     const weekStart = weekOffset * 7 + 1 - offset;
-
     for (let d = weekStart; d < weekStart + 7; d++) {
-      const card = document.createElement('div');
-      if (d < 1 || d > daysInMonth) {
-        card.className = 'rounded-2xl border border-dashed border-white/5 p-3 text-xs text-slate-700';
-        card.innerHTML = '<i class="fa-solid fa-minus mr-1"></i>вне месяца';
-        box.appendChild(card);
-        continue;
-      }
-      const full = `${viewKey}-${String(d).padStart(2, '0')}`;
-      const list = byDay[d] || [];
+      const card = document.createElement('div'); if (d < 1 || d > daysInMonth) { card.className = 'rounded-2xl border border-dashed border-white/5 p-3 text-xs text-slate-700'; card.innerHTML = '<i class="fa-solid fa-minus mr-1"></i>вне месяца'; box.appendChild(card); continue; }
+      const full = `${viewKey}-${String(d).padStart(2, '0')}`; const list = byDay[d] || [];
       const weekday = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(new Date(y, m - 1, d));
-      let dayInc = 0, dayExp = 0;
-      list.forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') dayInc += v; else dayExp += v; });
-
+      let dayInc = 0, dayExp = 0; list.forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') dayInc += v; else dayExp += v; });
       let cls = 'cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition hover:bg-white/[0.05]';
-      if (full === today) cls += ' border-emerald-300/40';
-      if (d === selectedDay) cls += ' ring-1 ring-emerald-300/60';
-      card.className = cls;
-
-      const events = list.slice(0, 3).map((e) => {
-        const c = CATS[e.cat];
-        const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || c.label);
-        return `<div class="flex items-center gap-2 text-xs"><span class="h-4 w-1 rounded-full ${c.color}"></span><span class="flex-1 truncate text-slate-300">${escapeHtml(name)}</span><span class="font-bold ${e.cat === 'incomes' ? 'text-emerald-300' : 'text-slate-200'}">${UI.fmtMoney(Calculator.toNumber(e.it.amount))}</span></div>`;
-      }).join('');
-
-      card.innerHTML = `
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="font-display text-lg font-bold ${full === today ? 'text-emerald-300' : 'text-slate-100'}">${d}</p>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${weekday}</p>
-          </div>
-          <div class="flex flex-col items-end gap-0.5">
-            ${dayInc ? `<span class="text-[10px] font-bold text-emerald-300">+${UI.fmtMoney(dayInc)}</span>` : ''}
-            ${dayExp ? `<span class="text-[10px] font-bold text-rose-300">−${UI.fmtMoney(dayExp)}</span>` : ''}
-            ${!dayInc && !dayExp ? '<span class="text-[10px] text-slate-600">пусто</span>' : ''}
-          </div>
-        </div>
-        ${list.length ? `<div class="mt-2 space-y-1">${events}${list.length > 3 ? `<p class="text-[10px] text-slate-500">+ ещё ${list.length - 3}</p>` : ''}</div>` : ''}`;
-      card.addEventListener('click', () => { if (consumeLongPress()) return; selectedDay = d; render(); });
-      attachLongPress(card, d);
-      box.appendChild(card);
+      if (full === today) cls += ' border-emerald-300/40'; if (d === selectedDay) cls += ' ring-1 ring-emerald-300/60'; card.className = cls;
+      const events = list.slice(0, 3).map((e) => { const c = CATS[e.cat]; const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || c.label); return `<div class="flex items-center gap-2 text-xs"><span class="h-4 w-1 rounded-full ${c.color}"></span><span class="flex-1 truncate text-slate-300">${escapeHtml(name)}</span><span class="font-bold ${e.cat === 'incomes' ? 'text-emerald-300' : 'text-slate-200'}">${UI.fmtMoney(Calculator.toNumber(e.it.amount))}</span></div>`; }).join('');
+      card.innerHTML = `<div class="flex items-center justify-between"><div><p class="font-display text-lg font-bold ${full === today ? 'text-emerald-300' : 'text-slate-100'}">${d}</p><p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${weekday}</p></div><div class="flex flex-col items-end gap-0.5">${dayInc ? `<span class="text-[10px] font-bold text-emerald-300">+${UI.fmtMoney(dayInc)}</span>` : ''}${dayExp ? `<span class="text-[10px] font-bold text-rose-300">−${UI.fmtMoney(dayExp)}</span>` : ''}${!dayInc && !dayExp ? '<span class="text-[10px] text-slate-600">пусто</span>' : ''}</div></div>${list.length ? `<div class="mt-2 space-y-1">${events}${list.length > 3 ? `<p class="text-[10px] text-slate-500">+ ещё ${list.length - 3}</p>` : ''}</div>` : ''}`;
+      card.addEventListener('click', () => { if (consumeLongPress()) return; selectedDay = d; render(); }); attachLongPress(card, d); box.appendChild(card);
     }
   }
-
   function renderChart(key) {
-    const [y, m] = key.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const byDay = entriesByDay(key);
-    const weeks = [];
-    let cumulative = 0, weekInc = 0, weekExp = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-      (byDay[d] || []).forEach((e) => {
-        const v = Calculator.toNumber(e.it.amount);
-        if (e.cat === 'incomes') { cumulative += v; weekInc += v; } else { cumulative -= v; weekExp += v; }
-      });
-      const weekday = (new Date(y, m - 1, d).getDay() + 6) % 7;
-      if (weekday === 6 || d === daysInMonth) { weeks.push({ value: cumulative, inc: weekInc, exp: weekExp }); weekInc = 0; weekExp = 0; }
-    }
-    const container = $('calChart');
-    if (!weeks.length || weeks.every((w) => w.inc === 0 && w.exp === 0)) {
-      container.innerHTML = '<p class="flex h-full items-center justify-center text-xs text-slate-600">Нет данных для графика</p>';
-      return;
-    }
-    const W = 360, H = 96, pad = 8;
-    const barW = (W - pad * 2) / weeks.length - 6;
-    const maxAbs = Math.max(...weeks.map((w) => Math.abs(w.value)), 1);
-    const zeroY = H / 2, scale = (H / 2 - 10) / maxAbs;
-    let bars = '';
-    weeks.forEach((w, i) => {
-      const x = pad + i * (barW + 6);
-      const h = Math.max(2, Math.abs(w.value) * scale);
-      const yPos = w.value >= 0 ? zeroY - h : zeroY;
-      bars += `<rect x="${x}" y="${yPos}" width="${barW}" height="${h}" rx="3" fill="${w.value >= 0 ? '#34d399' : '#fb7185'}" opacity="0.85"/>`;
-      bars += `<text x="${x + barW / 2}" y="${H - 2}" text-anchor="middle" font-size="8" font-weight="700" fill="#64748b">${i + 1}</text>`;
-    });
+    const [y, m] = key.split('-').map(Number); const daysInMonth = new Date(y, m, 0).getDate(); const byDay = entriesByDay(key);
+    const weeks = []; let cumulative = 0, weekInc = 0, weekExp = 0;
+    for (let d = 1; d <= daysInMonth; d++) { (byDay[d] || []).forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') { cumulative += v; weekInc += v; } else { cumulative -= v; weekExp += v; } }); const weekday = (new Date(y, m - 1, d).getDay() + 6) % 7; if (weekday === 6 || d === daysInMonth) { weeks.push({ value: cumulative, inc: weekInc, exp: weekExp }); weekInc = 0; weekExp = 0; } }
+    const container = $('calChart'); if (!weeks.length || weeks.every((w) => w.inc === 0 && w.exp === 0)) { container.innerHTML = '<p class="flex h-full items-center justify-center text-xs text-slate-600">Нет данных для графика</p>'; return; }
+    const W = 360, H = 96, pad = 8; const barW = (W - pad * 2) / weeks.length - 6; const maxAbs = Math.max(...weeks.map((w) => Math.abs(w.value)), 1);
+    const zeroY = H / 2, scale = (H / 2 - 10) / maxAbs; let bars = '';
+    weeks.forEach((w, i) => { const x = pad + i * (barW + 6); const h = Math.max(2, Math.abs(w.value) * scale); const yPos = w.value >= 0 ? zeroY - h : zeroY; bars += `<rect x="${x}" y="${yPos}" width="${barW}" height="${h}" rx="3" fill="${w.value >= 0 ? '#34d399' : '#fb7185'}" opacity="0.85"/>`; bars += `<text x="${x + barW / 2}" y="${H - 2}" text-anchor="middle" font-size="8" font-weight="700" fill="#64748b">${i + 1}</text>`; });
     container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="h-full w-full"><line x1="${pad}" y1="${zeroY}" x2="${W - pad}" y2="${zeroY}" stroke="#1e293b" stroke-dasharray="2 2"/>${bars}</svg>`;
   }
-
   function renderDetails() {
-    const byDay = entriesByDay(viewKey);
-    const list = byDay[selectedDay] || [];
-    const [y, m] = viewKey.split('-').map(Number);
+    const byDay = entriesByDay(viewKey); const list = byDay[selectedDay] || []; const [y, m] = viewKey.split('-').map(Number);
     $('calDetailsTitle').textContent = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' }).format(new Date(y, m - 1, selectedDay));
-    let inc = 0, exp = 0;
-    list.forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') inc += v; else exp += v; });
-    const chips = [];
-    if (inc) chips.push(`<span class="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">+${UI.fmtMoney(inc)}</span>`);
-    if (exp) chips.push(`<span class="rounded-full border border-rose-300/25 bg-rose-400/10 px-2 py-0.5 text-[10px] font-bold text-rose-300">−${UI.fmtMoney(exp)}</span>`);
-    $('calDetailsTotals').innerHTML = chips.join('');
-    const box = $('calDetailsList');
-    box.innerHTML = '';
-    if (!list.length) {
-      box.innerHTML = '<p class="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-600">На этот день записей нет · удерживайте дату, чтобы добавить</p>';
-      return;
-    }
+    let inc = 0, exp = 0; list.forEach((e) => { const v = Calculator.toNumber(e.it.amount); if (e.cat === 'incomes') inc += v; else exp += v; });
+    const chips = []; if (inc) chips.push(`<span class="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">+${UI.fmtMoney(inc)}</span>`); if (exp) chips.push(`<span class="rounded-full border border-rose-300/25 bg-rose-400/10 px-2 py-0.5 text-[10px] font-bold text-rose-300">−${UI.fmtMoney(exp)}</span>`);
+    $('calDetailsTotals').innerHTML = chips.join(''); const box = $('calDetailsList'); box.innerHTML = '';
+    if (!list.length) { box.innerHTML = '<p class="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-600">На этот день записей нет · удерживайте дату, чтобы добавить</p>'; return; }
     list.forEach((e) => {
-      const c = CATS[e.cat];
-      const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || c.label);
+      const c = CATS[e.cat]; const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || c.label);
       const sub = e.cat === 'utils' && e.it.property ? `${c.label} · ${e.it.property}` : c.label;
       const rep = e.it.repeat ? ' <i class="fa-solid fa-repeat ml-1 opacity-70"></i>' : '';
       const dim = activeCat && e.cat !== activeCat ? ' opacity-45' : '';
-      const row = document.createElement('div');
-      row.className = 'flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] p-2.5 transition hover:border-emerald-300/30 hover:bg-white/[0.06]' + dim;
-      row.innerHTML = `
-        <span class="h-9 w-1 shrink-0 rounded-full ${c.color}${e.it.inherited ? ' opacity-60' : ''}"></span>
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold text-slate-200">${escapeHtml(name)}${rep}</p>
-          <p class="text-[10px] font-medium ${c.text}"><i class="fa-solid ${c.icon} mr-1"></i>${escapeHtml(sub)}</p>
-        </div>
-        <span class="shrink-0 text-sm font-bold ${e.cat === 'incomes' ? 'text-emerald-300' : 'text-slate-100'}">${UI.fmtMoney(Calculator.toNumber(e.it.amount))}</span>
-        <i class="fa-solid fa-chevron-right text-[10px] text-slate-600"></i>`;
-      row.addEventListener('click', () => { if (window.AppGoToRow) AppGoToRow(e.cat, e.it.id, e.it.anchorKey || null); });
-      box.appendChild(row);
+      const row = document.createElement('div'); row.className = 'flex cursor-pointer items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] p-2.5 transition hover:border-emerald-300/30 hover:bg-white/[0.06]' + dim;
+      row.innerHTML = `<span class="h-9 w-1 shrink-0 rounded-full ${c.color}${e.it.inherited ? ' opacity-60' : ''}"></span><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-slate-200">${escapeHtml(name)}${rep}</p><p class="text-[10px] font-medium ${c.text}"><i class="fa-solid ${c.icon} mr-1"></i>${escapeHtml(sub)}</p></div><span class="shrink-0 text-sm font-bold ${e.cat === 'incomes' ? 'text-emerald-300' : 'text-slate-100'}">${UI.fmtMoney(Calculator.toNumber(e.it.amount))}</span><i class="fa-solid fa-chevron-right text-[10px] text-slate-600"></i>`;
+      row.addEventListener('click', () => { if (window.AppGoToRow) AppGoToRow(e.cat, e.it.id, e.it.anchorKey || null); }); box.appendChild(row);
     });
   }
-
   function renderUpcoming() {
-    const wrap = $('calUpcoming');
-    const isRealMonth = viewKey === realMonthKey();
-    wrap.classList.toggle('hidden', !isRealMonth);
-    if (!isRealMonth) return;
-    const todayDay = Number(todayISO().slice(8, 10));
-    const byDay = entriesByDay(viewKey);
-    const [y, m] = viewKey.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const queue = [];
+    const wrap = $('calUpcoming'); const isRealMonth = viewKey === realMonthKey(); wrap.classList.toggle('hidden', !isRealMonth); if (!isRealMonth) return;
+    const todayDay = Number(todayISO().slice(8, 10)); const byDay = entriesByDay(viewKey); const [y, m] = viewKey.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate(); const queue = [];
     for (let d = todayDay; d <= daysInMonth; d++) (byDay[d] || []).forEach((e) => queue.push({ day: d, cat: e.cat, it: e.it }));
     if (!queue.length) { wrap.classList.add('hidden'); return; }
-    const list = $('calUpcomingList');
-    list.innerHTML = '';
+    const list = $('calUpcomingList'); list.innerHTML = '';
     queue.slice(0, 3).forEach((e) => {
-      const c = CATS[e.cat];
-      const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || c.label);
-      const diff = e.day - todayDay;
-      let badge, badgeCls;
+      const c = CATS[e.cat]; const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || c.label);
+      const diff = e.day - todayDay; let badge, badgeCls;
       if (diff === 0) { badge = 'сегодня'; badgeCls = 'border-emerald-300/30 bg-emerald-400/10 text-emerald-300'; }
       else if (diff === 1) { badge = 'завтра'; badgeCls = 'border-amber-300/30 bg-amber-300/10 text-amber-300'; }
       else { badge = `через ${diff} ${plural(diff, ['день', 'дня', 'дней'])}`; badgeCls = 'border-white/10 bg-white/[0.05] text-slate-400'; }
       const dateLabel = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(y, m - 1, e.day));
-      const row = document.createElement('div');
-      row.className = 'flex items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] p-2.5';
-      row.innerHTML = `
-        <span class="h-9 w-1 shrink-0 rounded-full ${c.color}"></span>
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold text-slate-200">${escapeHtml(name)}</p>
-          <p class="text-[10px] font-medium ${c.text}"><i class="fa-solid ${c.icon} mr-1"></i>${c.label} · ${dateLabel}</p>
-        </div>
-        <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${badgeCls}">${badge}</span>
-        <span class="w-20 shrink-0 text-right text-sm font-bold ${e.cat === 'incomes' ? 'text-emerald-300' : 'text-slate-100'}">${UI.fmtMoney(Calculator.toNumber(e.it.amount))}</span>`;
+      const row = document.createElement('div'); row.className = 'flex items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] p-2.5';
+      row.innerHTML = `<span class="h-9 w-1 shrink-0 rounded-full ${c.color}"></span><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-slate-200">${escapeHtml(name)}</p><p class="text-[10px] font-medium ${c.text}"><i class="fa-solid ${c.icon} mr-1"></i>${c.label} · ${dateLabel}</p></div><span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${badgeCls}">${badge}</span><span class="w-20 shrink-0 text-right text-sm font-bold ${e.cat === 'incomes' ? 'text-emerald-300' : 'text-slate-100'}">${UI.fmtMoney(Calculator.toNumber(e.it.amount))}</span>`;
       list.appendChild(row);
     });
   }
-
-  function copyDayText() {
-    const byDay = entriesByDay(viewKey);
-    const list = byDay[selectedDay] || [];
-    const [y, m] = viewKey.split('-').map(Number);
-    const header = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(y, m - 1, selectedDay));
-    const lines = list.map((e) => {
-      const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || CATS[e.cat].label);
-      return `• ${name}: ${e.cat === 'incomes' ? '+' : '−'}${UI.fmtMoney(Calculator.toNumber(e.it.amount))}`;
-    });
-    if (window.AppCopyText) AppCopyText(`📅 ${header}\n${lines.length ? lines.join('\n') : 'Нет записей'}`);
-  }
-  function copyMonthText() {
-    const data = Recurring.mergedData(viewKey);
-    const inc = Calculator.sum(data.incomes);
-    const exp = Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other);
-    if (window.AppCopyText) AppCopyText(`💰 Баланс за ${Storage.monthLabel(viewKey)}\n\nДоходы: ${UI.fmtMoney(inc)}\nРасходы: ${UI.fmtMoney(exp)}\nОстаток: ${UI.fmtMoney(inc - exp)}`);
-  }
-
+  function copyDayText() { const byDay = entriesByDay(viewKey); const list = byDay[selectedDay] || []; const [y, m] = viewKey.split('-').map(Number); const header = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(y, m - 1, selectedDay)); const lines = list.map((e) => { const name = e.cat === 'utils' ? (e.it.service || 'Услуга') : (e.it.name || CATS[e.cat].label); return `• ${name}: ${e.cat === 'incomes' ? '+' : '−'}${UI.fmtMoney(Calculator.toNumber(e.it.amount))}`; }); if (window.AppCopyText) AppCopyText(`📅 ${header}\n${lines.length ? lines.join('\n') : 'Нет записей'}`); }
+  function copyMonthText() { const data = Recurring.mergedData(viewKey); const inc = Calculator.sum(data.incomes); const exp = Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other); if (window.AppCopyText) AppCopyText(`💰 Баланс за ${Storage.monthLabel(viewKey)}\n\nДоходы: ${UI.fmtMoney(inc)}\nРасходы: ${UI.fmtMoney(exp)}\nОстаток: ${UI.fmtMoney(inc - exp)}`); }
   const LEGEND_BASE = 'cal-legend flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-slate-400 transition active:scale-95';
-  function applyLegendStyles() {
-    document.querySelectorAll('.cal-legend').forEach((btn) => {
-      btn.className = LEGEND_BASE + (activeCat === btn.dataset.cat ? ' ' + CATS[btn.dataset.cat].legendOn : '');
-    });
-  }
-
+  function applyLegendStyles() { document.querySelectorAll('.cal-legend').forEach((btn) => { btn.className = LEGEND_BASE + (activeCat === btn.dataset.cat ? ' ' + CATS[btn.dataset.cat].legendOn : ''); }); }
   function init() {
-    document.querySelectorAll('.cal-legend').forEach((btn) => {
-      btn.addEventListener('click', () => { activeCat = activeCat === btn.dataset.cat ? null : btn.dataset.cat; applyLegendStyles(); render(); });
-    });
-    $('calPrev').addEventListener('click', () => shift(-1));
-    $('calNext').addEventListener('click', () => shift(1));
+    document.querySelectorAll('.cal-legend').forEach((btn) => { btn.addEventListener('click', () => { activeCat = activeCat === btn.dataset.cat ? null : btn.dataset.cat; applyLegendStyles(); render(); }); });
+    $('calPrev').addEventListener('click', () => shift(-1)); $('calNext').addEventListener('click', () => shift(1));
     $('calToday').addEventListener('click', () => { viewKey = realMonthKey(); selectedDay = Number(todayISO().slice(8, 10)); weekOffset = 0; render(); });
-    $('calModeMonth').addEventListener('click', () => { mode = 'month'; render(); });
-    $('calModeWeek').addEventListener('click', () => { mode = 'week'; render(); });
-    $('calCopyDay').addEventListener('click', copyDayText);
-    $('calCopyMonth').addEventListener('click', copyMonthText);
-
-    let startX = 0, startY = 0;
-    const grid = $('calGrid');
+    $('calModeMonth').addEventListener('click', () => { mode = 'month'; render(); }); $('calModeWeek').addEventListener('click', () => { mode = 'week'; render(); });
+    $('calCopyDay').addEventListener('click', copyDayText); $('calCopyMonth').addEventListener('click', copyMonthText);
+    let startX = 0, startY = 0; const grid = $('calGrid');
     grid.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, { passive: true });
-    grid.addEventListener('touchend', (e) => {
-      const dx = e.changedTouches[0].clientX - startX, dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5) shift(dx < 0 ? 1 : -1);
-    }, { passive: true });
+    grid.addEventListener('touchend', (e) => { const dx = e.changedTouches[0].clientX - startX, dy = e.changedTouches[0].clientY - startY; if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5) shift(dx < 0 ? 1 : -1); }, { passive: true });
   }
-
-  function open() {
-    viewKey = (window.AppState && AppState.currentKey) || realMonthKey();
-    const today = todayISO();
-    selectedDay = today.slice(0, 7) === viewKey ? Number(today.slice(8, 10)) : 1;
-    render();
-  }
-
+  function open() { viewKey = (window.AppState && AppState.currentKey) || realMonthKey(); const today = todayISO(); selectedDay = today.slice(0, 7) === viewKey ? Number(today.slice(8, 10)) : 1; render(); }
   function shift(delta) {
     if (mode === 'week') {
-      const [y, m] = viewKey.split('-').map(Number);
-      const daysInMonth = new Date(y, m, 0).getDate();
-      const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-      const weeks = Math.ceil((offset + daysInMonth) / 7);
-      const newOff = weekOffset + delta;
-      if (newOff < 0) {
-        viewKey = Storage.keyFor(new Date(y, m - 2, 1));
-        const [py, pm] = viewKey.split('-').map(Number);
-        const pdays = new Date(py, pm, 0).getDate();
-        const poffset = (new Date(py, pm - 1, 1).getDay() + 6) % 7;
-        weekOffset = Math.ceil((poffset + pdays) / 7) - 1;
-      } else if (newOff >= weeks) { viewKey = Storage.keyFor(new Date(y, m, 1)); weekOffset = 0; }
-      else weekOffset = newOff;
-    } else {
-      const [y, m] = viewKey.split('-').map(Number);
-      viewKey = Storage.keyFor(new Date(y, m - 1 + delta, 1));
-      selectedDay = 1;
-    }
+      const [y, m] = viewKey.split('-').map(Number); const daysInMonth = new Date(y, m, 0).getDate(); const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+      const weeks = Math.ceil((offset + daysInMonth) / 7); const newOff = weekOffset + delta;
+      if (newOff < 0) { viewKey = Storage.keyFor(new Date(y, m - 2, 1)); const [py, pm] = viewKey.split('-').map(Number); const pdays = new Date(py, pm, 0).getDate(); const poffset = (new Date(py, pm - 1, 1).getDay() + 6) % 7; weekOffset = Math.ceil((poffset + pdays) / 7) - 1; }
+      else if (newOff >= weeks) { viewKey = Storage.keyFor(new Date(y, m, 1)); weekOffset = 0; } else weekOffset = newOff;
+    } else { const [y, m] = viewKey.split('-').map(Number); viewKey = Storage.keyFor(new Date(y, m - 1 + delta, 1)); selectedDay = 1; }
     render();
   }
-
-  function refreshIfVisible() {
-    if (!document.getElementById('screenCalendar').classList.contains('hidden')) render();
-  }
+  function refreshIfVisible() { if (!document.getElementById('screenCalendar').classList.contains('hidden')) render(); }
   return { init, open, shift, refreshIfVisible };
 })();
 
 /* ================= 9. ПРИЛОЖЕНИЕ ================= */
 (function () {
   'use strict';
-  const $ = (id) => document.getElementById(id);
-  let currentKey = Storage.keyFor(new Date());
-  let dirty = false;
-  window.AppState = { get currentKey() { return currentKey; } };
-  const fmtPercent = (v) => Math.round(v) + '%';
-
+  const $ = (id) => document.getElementById(id); let currentKey = Storage.keyFor(new Date()); let dirty = false;
+  window.AppState = { get currentKey() { return currentKey; } }; const fmtPercent = (v) => Math.round(v) + '%';
   function setMonthLabel() { $('monthLabel').textContent = Storage.monthLabel(currentKey); }
-  function updateSavedTag(state) {
-    const tag = $('savedTag');
-    const map = {
-      saved: { cls: 'text-emerald-300', html: '<i class="fa-solid fa-circle-check mr-1"></i>сохранено' },
-      dirty: { cls: 'text-amber-300',   html: '<i class="fa-solid fa-pen mr-1"></i>не сохранено' },
-      empty: { cls: 'text-slate-500',   html: '<i class="fa-solid fa-circle-minus mr-1"></i>нет данных' },
-    };
-    tag.className = 'text-[10px] font-bold ' + map[state].cls;
-    tag.innerHTML = map[state].html;
-  }
-  function loadMonth(key) {
-    currentKey = key; dirty = false;
-    const saved = Storage.getMonth(key);
-    if (saved) BudgetState.load(saved); else BudgetState.seedEmpty();
-    Recurring.collectFor(key).forEach(({ section, item }) => BudgetState.inject(section, item));
-    UI.renderAll();
-    setMonthLabel();
-    updateSavedTag(saved ? 'saved' : 'empty');
-    resetResultCard();
-    renderReminder();
-  }
-  function shiftMonth(delta) {
-    const [y, m] = currentKey.split('-').map(Number);
-    loadMonth(Storage.keyFor(new Date(y, m - 1 + delta, 1)));
-  }
-  function saveMonth() {
-    if (!BudgetState.hasValues()) { UI.showToast('Заполните хотя бы один пункт', 'warn'); return; }
-    Storage.saveMonth(currentKey, BudgetState.snapshot());
-    if (!Storage.getMonth(currentKey)) { UI.showToast('Не удалось сохранить данные', 'err'); return; }
-    dirty = false;
-    updateSavedTag('saved');
-    UI.showToast('Сохранено: ' + Storage.monthLabel(currentKey) + ' → вкладка «Итоги»');
-  }
-  function markDirty() {
-    if (!dirty) { dirty = true; updateSavedTag('dirty'); }
-    CalendarView.refreshIfVisible();
-    renderReminder();
-  }
-
-  const SCREENS = { budget: 'screenEditor', calendar: 'screenCalendar', history: 'screenHistory' };
-  const TABS = { budget: 'tabBudget', calendar: 'tabCalendar', history: 'tabHistory' };
-  function setTab(btn, active) {
-    btn.classList.toggle('text-emerald-300', active);
-    btn.classList.toggle('text-slate-500', !active);
-    btn.querySelector('.tab-dot').classList.toggle('opacity-0', !active);
-  }
-  function showScreen(name) {
-    for (const k in SCREENS) $(SCREENS[k]).classList.toggle('hidden', k !== name);
-    for (const k in TABS) setTab($(TABS[k]), k === name);
-    if (name === 'history') History.render();
-    if (name === 'calendar') CalendarView.open();
-    $('appScroll').scrollTop = 0;
-  }
-
-  function openSavedMonth(btn) {
-    const key = btn.closest('[data-month]').dataset.month;
-    loadMonth(key);
-    showScreen('budget');
-    UI.showToast('Загружено: ' + Storage.monthLabel(key));
-  }
-  function deleteSavedMonth(btn) {
-    const key = btn.closest('[data-month]').dataset.month;
-    if (btn.dataset.confirm !== '1') {
-      btn.dataset.confirm = '1';
-      btn.classList.add('border-rose-300/40', 'bg-rose-400/10', 'text-rose-300');
-      btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i>';
-      setTimeout(() => {
-        if (!btn.isConnected) return;
-        btn.dataset.confirm = '0';
-        btn.classList.remove('border-rose-300/40', 'bg-rose-400/10', 'text-rose-300');
-        btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>';
-      }, 2500);
-      return;
-    }
-    Storage.removeMonth(key);
-    if (key === currentKey) { dirty = false; updateSavedTag('empty'); }
-    History.render();
-    UI.showToast('Месяц удалён из архива', 'err');
-  }
-
-  function calculate() {
-    const data = BudgetState.data;
-    const totalIncome = Calculator.sum(data.incomes);
-    const totalExpenses = Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other);
-    if (totalIncome === 0 && totalExpenses === 0) {
-      const btn = $('calcBtn');
-      btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake');
-      const hint = $('formHint');
-      hint.textContent = 'Заполните хотя бы один пункт';
-      hint.classList.remove('opacity-0');
-      setTimeout(() => hint.classList.add('opacity-0'), 2200);
-      return;
-    }
-    render(Calculator.calcBudget(data));
-  }
-  function animateNumber(el, target, formatter) {
-    const from = el._value || 0, duration = 600, start = performance.now();
-    cancelAnimationFrame(el._raf);
-    const step = (now) => {
-      const progress = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      el.textContent = formatter(from + (target - from) * eased);
-      if (progress < 1) el._raf = requestAnimationFrame(step); else el._value = target;
-    };
-    el._raf = requestAnimationFrame(step);
-  }
+  function updateSavedTag(state) { const tag = $('savedTag'); const map = { saved: { cls: 'text-emerald-300', html: '<i class="fa-solid fa-circle-check mr-1"></i>сохранено' }, dirty: { cls: 'text-amber-300', html: '<i class="fa-solid fa-pen mr-1"></i>не сохранено' }, empty: { cls: 'text-slate-500', html: '<i class="fa-solid fa-circle-minus mr-1"></i>нет данных' } }; tag.className = 'text-[10px] font-bold ' + map[state].cls; tag.innerHTML = map[state].html; }
+  function loadMonth(key) { currentKey = key; dirty = false; const saved = Storage.getMonth(key); if (saved) BudgetState.load(saved); else BudgetState.seedEmpty(); Recurring.collectFor(key).forEach(({ section, item }) => BudgetState.inject(section, item)); UI.renderAll(); setMonthLabel(); updateSavedTag(saved ? 'saved' : 'empty'); resetResultCard(); renderReminder(); }
+  function shiftMonth(delta) { const [y, m] = currentKey.split('-').map(Number); loadMonth(Storage.keyFor(new Date(y, m - 1 + delta, 1))); }
+  function saveMonth() { if (!BudgetState.hasValues()) { UI.showToast('Заполните хотя бы один пункт', 'warn'); return; } Storage.saveMonth(currentKey, BudgetState.snapshot()); if (!Storage.getMonth(currentKey)) { UI.showToast('Не удалось сохранить данные', 'err'); return; } dirty = false; updateSavedTag('saved'); UI.showToast('Сохранено: ' + Storage.monthLabel(currentKey) + ' → вкладка «Итоги»'); }
+  function markDirty() { if (!dirty) { dirty = true; updateSavedTag('dirty'); } CalendarView.refreshIfVisible(); renderReminder(); }
+  const SCREENS = { budget: 'screenEditor', calendar: 'screenCalendar', history: 'screenHistory' }; const TABS = { budget: 'tabBudget', calendar: 'tabCalendar', history: 'tabHistory' };
+  function setTab(btn, active) { btn.classList.toggle('text-emerald-300', active); btn.classList.toggle('text-slate-500', !active); btn.querySelector('.tab-dot').classList.toggle('opacity-0', !active); }
+  function showScreen(name) { for (const k in SCREENS) $(SCREENS[k]).classList.toggle('hidden', k !== name); for (const k in TABS) setTab($(TABS[k]), k === name); if (name === 'history') History.render(); if (name === 'calendar') CalendarView.open(); $('appScroll').scrollTop = 0; }
+  function openSavedMonth(btn) { const key = btn.closest('[data-month]').dataset.month; loadMonth(key); showScreen('budget'); UI.showToast('Загружено: ' + Storage.monthLabel(key)); }
+  function deleteSavedMonth(btn) { const key = btn.closest('[data-month]').dataset.month; if (btn.dataset.confirm !== '1') { btn.dataset.confirm = '1'; btn.classList.add('border-rose-300/40', 'bg-rose-400/10', 'text-rose-300'); btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i>'; setTimeout(() => { if (!btn.isConnected) return; btn.dataset.confirm = '0'; btn.classList.remove('border-rose-300/40', 'bg-rose-400/10', 'text-rose-300'); btn.innerHTML = '<i class="fa-solid fa-trash-can text-xs"></i>'; }, 2500); return; } Storage.removeMonth(key); if (key === currentKey) { dirty = false; updateSavedTag('empty'); } History.render(); UI.showToast('Месяц удалён из архива', 'err'); }
+  function calculate() { const data = BudgetState.data; const totalIncome = Calculator.sum(data.incomes); const totalExpenses = Calculator.sum(data.credits) + Calculator.sum(data.family) + Calculator.sum(data.utils) + Calculator.sum(data.other); if (totalIncome === 0 && totalExpenses === 0) { const btn = $('calcBtn'); btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake'); const hint = $('formHint'); hint.textContent = 'Заполните хотя бы один пункт'; hint.classList.remove('opacity-0'); setTimeout(() => hint.classList.add('opacity-0'), 2200); return; } render(Calculator.calcBudget(data)); }
+  function animateNumber(el, target, formatter) { const from = el._value || 0, duration = 600, start = performance.now(); cancelAnimationFrame(el._raf); const step = (now) => { const progress = Math.min(1, (now - start) / duration); const eased = 1 - Math.pow(1 - progress, 3); el.textContent = formatter(from + (target - from) * eased); if (progress < 1) el._raf = requestAnimationFrame(step); else el._value = target; }; el._raf = requestAnimationFrame(step); }
   function render(res) {
-    const s = UI.STATUS[res.statusKey];
-    animateNumber($('outIncome'), res.totalIncome, UI.fmtMoney);
-    animateNumber($('outExpenses'), res.totalExpenses, UI.fmtMoney);
-    animateNumber($('outFree'), res.freeBalance, UI.fmtMoney);
-    animateNumber($('outLoad'), res.loadPercent, fmtPercent);
-    animateNumber($('outCredit'), res.breakdown.credits, UI.fmtMoney);
-    animateNumber($('outFamily'), res.breakdown.family, UI.fmtMoney);
-    animateNumber($('outUtils'), res.breakdown.utils, UI.fmtMoney);
-    animateNumber($('outOther'), res.breakdown.other, UI.fmtMoney);
+    const s = UI.STATUS[res.statusKey]; animateNumber($('outIncome'), res.totalIncome, UI.fmtMoney); animateNumber($('outExpenses'), res.totalExpenses, UI.fmtMoney);
+    animateNumber($('outFree'), res.freeBalance, UI.fmtMoney); animateNumber($('outLoad'), res.loadPercent, fmtPercent);
+    animateNumber($('outCredit'), res.breakdown.credits, UI.fmtMoney); animateNumber($('outFamily'), res.breakdown.family, UI.fmtMoney);
+    animateNumber($('outUtils'), res.breakdown.utils, UI.fmtMoney); animateNumber($('outOther'), res.breakdown.other, UI.fmtMoney);
     $('outFree').className = 'font-display text-2xl font-bold transition-colors ' + (res.freeBalance >= 0 ? 'text-emerald-300' : 'text-rose-300');
     $('loadChip').className = 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors ' + s.chip;
     $('loadChip').innerHTML = `<i class="fa-solid ${s.icon}"></i> ${s.label}`;
-    const bar = $('loadBar');
-    bar.className = 'h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out ' + s.bar;
-    bar.style.width = Math.min(res.loadPercent, 100) + '%';
-    const msg = $('loadMsg');
-    msg.classList.remove('hidden'); msg.classList.add('flex');
-    msg.innerHTML = `<i class="fa-solid ${s.icon} ${s.accent}"></i> ${s.msg}`;
-    const card = $('resultCard');
-    card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+    const bar = $('loadBar'); bar.className = 'h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out ' + s.bar; bar.style.width = Math.min(res.loadPercent, 100) + '%';
+    const msg = $('loadMsg'); msg.classList.remove('hidden'); msg.classList.add('flex'); msg.innerHTML = `<i class="fa-solid ${s.icon} ${s.accent}"></i> ${s.msg}`;
+    const card = $('resultCard'); card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
   }
-  function resetResultCard() {
-    ['outIncome', 'outExpenses', 'outFree', 'outLoad', 'outCredit', 'outFamily', 'outUtils', 'outOther'].forEach((id) => { $(id).textContent = '—'; $(id)._value = 0; });
-    $('outFree').className = 'font-display text-2xl font-bold text-slate-500';
-    $('loadBar').style.width = '0%';
-    $('loadChip').className = 'inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-400';
-    $('loadChip').innerHTML = '<i class="fa-solid fa-circle-minus"></i> нет данных';
-    $('loadMsg').classList.add('hidden'); $('loadMsg').classList.remove('flex');
-  }
-
+  function resetResultCard() { ['outIncome', 'outExpenses', 'outFree', 'outLoad', 'outCredit', 'outFamily', 'outUtils', 'outOther'].forEach((id) => { $(id).textContent = '—'; $(id)._value = 0; }); $('outFree').className = 'font-display text-2xl font-bold text-slate-500'; $('loadBar').style.width = '0%'; $('loadChip').className = 'inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-400'; $('loadChip').innerHTML = '<i class="fa-solid fa-circle-minus"></i> нет данных'; $('loadMsg').classList.add('hidden'); $('loadMsg').classList.remove('flex'); }
   function renderReminder() {
-    const wrap = $('reminder');
-    const data = Recurring.mergedData(currentKey);
-    const d = new Date();
+    const wrap = $('reminder'); const data = Recurring.mergedData(currentKey); const d = new Date();
     const todayISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const candidates = [];
-    BudgetState.SECTIONS.forEach((sec) => {
-      (data[sec] || []).forEach((it) => { if (it.date && Calculator.toNumber(it.amount) > 0) candidates.push({ sec, it }); });
-    });
+    const candidates = []; BudgetState.SECTIONS.forEach((sec) => { (data[sec] || []).forEach((it) => { if (it.date && Calculator.toNumber(it.amount) > 0) candidates.push({ sec, it }); }); });
     const upcoming = candidates.filter((c) => c.it.date >= todayISO).sort((a, b) => (a.it.date < b.it.date ? -1 : 1))[0];
     if (!upcoming) { wrap.classList.add('hidden'); return; }
     const diffDays = Math.round((new Date(upcoming.it.date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
     const name = upcoming.sec === 'utils' ? (upcoming.it.service || 'Услуга') : (upcoming.it.name || 'Событие');
-    let badge, badgeCls;
-    if (diffDays === 0) { badge = 'сегодня'; badgeCls = 'border-emerald-300/30 bg-emerald-400/15 text-emerald-300'; }
-    else if (diffDays === 1) { badge = 'завтра'; badgeCls = 'border-amber-300/30 bg-amber-300/15 text-amber-300'; }
-    else if (diffDays < 7) { badge = `через ${diffDays} дн.`; badgeCls = 'border-amber-300/30 bg-amber-300/10 text-amber-300'; }
-    else { badge = `через ${diffDays} дн.`; badgeCls = 'border-white/15 bg-white/[0.06] text-slate-300'; }
+    let badge, badgeCls; if (diffDays === 0) { badge = 'сегодня'; badgeCls = 'border-emerald-300/30 bg-emerald-400/15 text-emerald-300'; } else if (diffDays === 1) { badge = 'завтра'; badgeCls = 'border-amber-300/30 bg-amber-300/15 text-amber-300'; } else if (diffDays < 7) { badge = `через ${diffDays} дн.`; badgeCls = 'border-amber-300/30 bg-amber-300/10 text-amber-300'; } else { badge = `через ${diffDays} дн.`; badgeCls = 'border-white/15 bg-white/[0.06] text-slate-300'; }
     $('reminderText').textContent = `${upcoming.sec === 'incomes' ? '+' : '−'}${UI.fmtMoney(Calculator.toNumber(upcoming.it.amount))} — ${name}`;
-    $('reminderBadge').className = 'shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ' + badgeCls;
-    $('reminderBadge').textContent = badge;
-    wrap.classList.remove('hidden');
+    $('reminderBadge').className = 'shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ' + badgeCls; $('reminderBadge').textContent = badge; wrap.classList.remove('hidden');
   }
-
-  window.AppGoToRow = function (section, id, anchorKey) {
-    const targetKey = anchorKey || currentKey;
-    if (targetKey !== currentKey) loadMonth(targetKey);
-    showScreen('budget');
-    setTimeout(() => {
-      const row = document.querySelector(`#screenEditor [data-section="${section}"][data-id="${id}"]`);
-      if (row) {
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        row.classList.add('row-pulse');
-        setTimeout(() => row.classList.remove('row-pulse'), 1700);
-      }
-    }, 100);
-  };
-  window.AppCopyText = async function (text) {
-    try { await navigator.clipboard.writeText(text); UI.showToast('Скопировано в буфер'); }
-    catch (e) { UI.showToast('Не удалось скопировать', 'warn'); }
-  };
-  window.AppSaveMonth = function () {
-    saveMonth();
-  };
-
+  window.AppGoToRow = function (section, id, anchorKey) { const targetKey = anchorKey || currentKey; if (targetKey !== currentKey) loadMonth(targetKey); showScreen('budget'); setTimeout(() => { const row = document.querySelector(`#screenEditor [data-section="${section}"][data-id="${id}"]`); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.classList.add('row-pulse'); setTimeout(() => row.classList.remove('row-pulse'), 1700); } }, 100); };
+  window.AppCopyText = async function (text) { try { await navigator.clipboard.writeText(text); UI.showToast('Скопировано в буфер'); } catch (e) { UI.showToast('Не удалось скопировать', 'warn'); } };
+  window.AppSaveMonth = function () { saveMonth(); };
   const FIELD_MAP = { 'row-name': 'name', 'row-amount': 'amount', 'row-service': 'service', 'row-property': 'property', 'row-date': 'date' };
-
   document.addEventListener('click', (e) => {
-    const add = e.target.closest('.add-btn');
-    if (add) {
-      const item = BudgetState.add(add.dataset.section, BudgetState.blankItem(add.dataset.section));
-      UI.renderList(add.dataset.section);
-      UI.focusRow(add.dataset.section, item.id);
-      markDirty();
-      return;
-    }
-    const rm = e.target.closest('.row-remove');
-    if (rm) {
-      const row = rm.closest('[data-id]');
-      UI.removeRow(row.dataset.section, Number(row.dataset.id), row);
-      markDirty();
-      return;
-    }
-    const stop = e.target.closest('.row-stop');
-    if (stop) {
-      const row = stop.closest('[data-id]');
-      Recurring.stopRepeat(row.dataset.section, Number(row.dataset.id));
-      UI.renderAll();
-      markDirty();
-      UI.showToast('Повторение остановлено');
-      return;
-    }
-    const ic = e.target.closest('.icon-btn');
-    if (ic) {
-      const row = ic.closest('[data-id]');
-      if (row && !row.querySelector('input:disabled')) UI.openPicker(row.dataset.section, Number(row.dataset.id), row);
-      return;
-    }
-    if (e.target.closest('.h-open')) { openSavedMonth(e.target.closest('.h-open')); return; }
-    if (e.target.closest('.h-del')) deleteSavedMonth(e.target.closest('.h-del'));
+    const add = e.target.closest('.add-btn'); if (add) { const item = BudgetState.add(add.dataset.section, BudgetState.blankItem(add.dataset.section)); UI.renderList(add.dataset.section); UI.focusRow(add.dataset.section, item.id); markDirty(); return; }
+    const rm = e.target.closest('.row-remove'); if (rm) { const row = rm.closest('[data-id]'); UI.removeRow(row.dataset.section, Number(row.dataset.id), row); markDirty(); return; }
+    const stop = e.target.closest('.row-stop'); if (stop) { const row = stop.closest('[data-id]'); Recurring.stopRepeat(row.dataset.section, Number(row.dataset.id)); UI.renderAll(); markDirty(); UI.showToast('Повторение остановлено'); return; }
+    const ic = e.target.closest('.icon-btn'); if (ic) { const row = ic.closest('[data-id]'); if (row && !row.querySelector('input:disabled')) UI.openPicker(row.dataset.section, Number(row.dataset.id), row); return; }
+    if (e.target.closest('.h-open')) { openSavedMonth(e.target.closest('.h-open')); return; } if (e.target.closest('.h-del')) deleteSavedMonth(e.target.closest('.h-del'));
   });
-
-  document.addEventListener('input', (e) => {
-    const row = e.target.closest('[data-id]');
-    if (!row) return;
-    for (const cls in FIELD_MAP) {
-      if (e.target.classList.contains(cls)) {
-        BudgetState.setField(row.dataset.section, Number(row.dataset.id), FIELD_MAP[cls], e.target.value);
-        break;
-      }
-    }
-    UI.updateSum(row.dataset.section);
-    markDirty();
-  });
-
-  document.addEventListener('change', (e) => {
-    if (!e.target.classList.contains('row-repeat')) return;
-    const row = e.target.closest('[data-id]');
-    const checked = e.target.checked;
-    BudgetState.setField(row.dataset.section, Number(row.dataset.id), 'repeat', checked);
-    const chip = row.querySelector('.repeat-note');
-    if (chip) { chip.classList.toggle('hidden', !checked); chip.classList.toggle('inline-flex', checked); }
-    markDirty();
-    UI.showToast(checked ? 'Запись повторится в следующих месяцах' : 'Повторение выключено');
-  });
+  document.addEventListener('input', (e) => { const row = e.target.closest('[data-id]'); if (!row) return; for (const cls in FIELD_MAP) { if (e.target.classList.contains(cls)) { BudgetState.setField(row.dataset.section, Number(row.dataset.id), FIELD_MAP[cls], e.target.value); break; } } UI.updateSum(row.dataset.section); markDirty(); });
+  document.addEventListener('change', (e) => { if (!e.target.classList.contains('row-repeat')) return; const row = e.target.closest('[data-id]'); const checked = e.target.checked; BudgetState.setField(row.dataset.section, Number(row.dataset.id), 'repeat', checked); const chip = row.querySelector('.repeat-note'); if (chip) { chip.classList.toggle('hidden', !checked); chip.classList.toggle('inline-flex', checked); } markDirty(); UI.showToast(checked ? 'Запись повторится в следующих месяцах' : 'Повторение выключено'); });
+  
+  /* ===== ЭКСПОРТ / ИМПОРТ ДАННЫХ ===== */
+  function exportData() {
+    const db = Storage.listEntries(); if (!db.length) { UI.showToast('Нет данных для экспорта', 'warn'); return; }
+    const backup = { app: 'balance-pwa', version: '2.0', exportedAt: new Date().toISOString(), months: {} };
+    db.forEach(entry => { backup.months[entry.key] = entry.data; });
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = `balance-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    UI.showToast('Резервная копия скачана');
+  }
+  function importData(file) {
+    const reader = new FileReader(); reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result); if (!json.months) throw new Error('Неверный формат');
+        const currentDb = Storage.read(); Object.assign(currentDb.months, json.months); Storage.write(currentDb);
+        UI.showToast('Данные восстановлены!'); History.render();
+      } catch (err) { UI.showToast('Ошибка: ' + err.message, 'err'); }
+    }; reader.readAsText(file);
+  }
+  document.getElementById('btnExport').addEventListener('click', exportData);
+  document.getElementById('fileImport').addEventListener('change', (e) => { if (e.target.files.length > 0) { importData(e.target.files[0]); e.target.value = ''; } });
 
   function init() {
-    UI.init();
-    CalendarView.init();
-    History.init();
-    DayEditor.init(() => markDirty());
-    loadMonth(currentKey);
-
-    $('calcBtn').addEventListener('click', calculate);
-    $('saveBtn').addEventListener('click', saveMonth);
-    $('prevMonth').addEventListener('click', () => shiftMonth(-1));
-    $('nextMonth').addEventListener('click', () => shiftMonth(1));
-    $('tabBudget').addEventListener('click', () => showScreen('budget'));
-    $('tabCalendar').addEventListener('click', () => showScreen('calendar'));
+    UI.init(); CalendarView.init(); History.init(); DayEditor.init(() => markDirty()); loadMonth(currentKey);
+    $('calcBtn').addEventListener('click', calculate); $('saveBtn').addEventListener('click', saveMonth);
+    $('prevMonth').addEventListener('click', () => shiftMonth(-1)); $('nextMonth').addEventListener('click', () => shiftMonth(1));
+    $('tabBudget').addEventListener('click', () => showScreen('budget')); $('tabCalendar').addEventListener('click', () => showScreen('calendar'));
     $('tabHistory').addEventListener('click', () => showScreen('history'));
-
-    const tick = () => {
-      const d = new Date();
-      $('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    };
-    tick();
-    setInterval(tick, 30000);
-
-    ['listIncomes', 'listCredits', 'listFamily', 'listUtils', 'listOther'].forEach((id) => {
-      $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') calculate(); });
-    });
+    const tick = () => { const d = new Date(); $('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+    tick(); setInterval(tick, 30000);
+    ['listIncomes', 'listCredits', 'listFamily', 'listUtils', 'listOther'].forEach((id) => { $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') calculate(); }); });
   }
-/* ===== ЭКСПОРТ / ИМПОРТ ДАННЫХ ===== */
-function exportData() {
-  const db = Storage.listEntries(); // Получаем все сохраненные месяцы
-  if (!db.length) { 
-    UI.showToast('Нет данных для экспорта', 'warn'); 
-    return; 
-  }
-  
-  const backup = {
-    app: 'balance-pwa',
-    version: '1.0',
-    exportedAt: new Date().toISOString(),
-    months: {}
-  };
-  
-  // Формируем структуру для сохранения
-  db.forEach(entry => {
-    backup.months[entry.key] = entry.data;
-  });
-
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `balance-backup-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  UI.showToast('Резервная копия скачана');
-}
-
-function importData(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const json = JSON.parse(e.target.result);
-      
-      // Проверка структуры файла
-      if (!json.months || typeof json.months !== 'object') {
-        throw new Error('Неверный формат файла');
-      }
-
-      // Восстанавливаем данные в LocalStorage
-      const currentDb = Storage.read(); // Используем внутренний метод хранилища
-      Object.assign(currentDb.months, json.months);
-      Storage.write(currentDb); // Сохраняем обновленную базу
-      
-      UI.showToast('Данные успешно восстановлены!');
-      
-      // Обновляем экран истории, если он открыт
-      if (!document.getElementById('screenHistory').classList.contains('hidden')) {
-        History.render();
-      }
-    } catch (err) {
-      UI.showToast('Ошибка чтения файла: ' + err.message, 'err');
-    }
-  };
-  reader.readAsText(file);
-}
-
-// Привязываем обработчики к кнопкам
-document.getElementById('btnExport').addEventListener('click', exportData);
-document.getElementById('fileImport').addEventListener('change', (e) => {
-  if (e.target.files.length > 0) {
-    importData(e.target.files[0]);
-    e.target.value = ''; // Сброс input для повторной загрузки того же файла
-  }
-});
   document.addEventListener('DOMContentLoaded', init);
 })();
 
-/* Глобальный ловец ошибок */
-window.addEventListener('error', (e) => {
-  try { if (window.UI && UI.showToast) UI.showToast('Ошибка: ' + (e.message || 'неизвестно'), 'err'); } catch (x) {}
-});
+window.addEventListener('error', (e) => { try { if (window.UI && UI.showToast) UI.showToast('Ошибка: ' + (e.message || 'неизвестно'), 'err'); } catch (x) {} });
 </script>
-
-<!-- Регистрация сервис-воркера для установки как приложение -->
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js');
-  });
-}
-  /* ===== ЛОГИКА ЭКСПОРТА / ИМПОРТА ===== */
-// Делаем методы read/write публичными для импорта
-const StoragePublic = window.Storage || {}; 
-
-function exportData() {
-  const db = Storage.listEntries();
-  if (!db.length) { UI.showToast('Нет данных для экспорта', 'warn'); return; }
-  
-  const backup = { app: 'balance-pwa', version: '2.0', exportedAt: new Date().toISOString(), months: {} };
-  db.forEach(entry => { backup.months[entry.key] = entry.data; });
-
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `balance-backup-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  UI.showToast('Резервная копия скачана');
-}
-
-function importData(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const json = JSON.parse(e.target.result);
-      if (!json.months) throw new Error('Неверный формат');
-      
-      // Восстанавливаем данные
-      const currentDb = Storage.read(); 
-      Object.assign(currentDb.months, json.months);
-      Storage.write(currentDb);
-      
-      UI.showToast('Данные восстановлены!');
-      History.render(); // Обновляем экран
-    } catch (err) { UI.showToast('Ошибка: ' + err.message, 'err'); }
-  };
-  reader.readAsText(file);
-}
-
-document.getElementById('btnExport').addEventListener('click', exportData);
-document.getElementById('fileImport').addEventListener('change', (e) => {
-  if (e.target.files.length > 0) { importData(e.target.files[0]); e.target.value = ''; }
-});
-</script>
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); }); }</script>
 </body>
 </html>
