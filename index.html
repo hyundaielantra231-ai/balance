@@ -27,7 +27,15 @@ tailwind.config = { theme: { extend: { fontFamily: { display:['Unbounded','sans-
 :root { --ease: cubic-bezier(.22,1,.36,1); }
 * { -webkit-tap-highlight-color: transparent; }
 html, body { background: #05070c; }
-input, select { appearance: none; color-scheme: dark; }
+input, select, textarea { 
+  appearance: none; 
+  color-scheme: dark; 
+  font-size: 16px !important; /* Запрещает авто-зум на iOS */
+}
+  /* Запрет авто-зума при фокусе на полях ввода (iOS Safari) */
+input:focus, select:focus, textarea:focus {
+  font-size: 16px !important;
+}
 button, [role="button"], input, select, label { touch-action: manipulation; }
 button { -webkit-user-select: none; user-select: none; }
 input[type="date"]::-webkit-calendar-picker-indicator { opacity:.5; cursor:pointer; }
