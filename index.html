@@ -12,6 +12,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Баланс">
 <style>
+/* 🔥 ЖЕСТКИЙ ЗАПРЕТ АВТО-ЗУМА НА iOS */
+input, select, textarea {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Остальные ваши стили... */
+:root { --ease: cubic-bezier(.22,1,.36,1); }
+...
   nav { padding-bottom: env(safe-area-inset-bottom); }
 </style>
 
