@@ -251,7 +251,19 @@ const Storage = (() => {
   'use strict';
   const KEY = 'family-budget:v1'; let memoryBackup = null;
   function read() { try { const raw = localStorage.getItem(KEY); if (raw) { const db = JSON.parse(raw); if (db && db.months) return db; } } catch (e) {} return memoryBackup || { months: {} }; }
-  function write(db) { memoryBackup = db; try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+  
+  // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАПИСИ
+  function write(db, isImport = false) { 
+    memoryBackup = db; 
+    try { 
+      localStorage.setItem(KEY, JSON.stringify(db)); 
+      // Если это импорт из файла, принудительно перезагружаем страницу для обновления UI
+      if (isImport) {
+        window.location.reload();
+      }
+    } catch (e) {} 
+  }
+  
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const keyFor = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   function monthLabel(key) { const [y, m] = key.split('-').map(Number); const label = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1)); return label.charAt(0).toUpperCase() + label.slice(1); }
