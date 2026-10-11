@@ -623,13 +623,20 @@ const CalendarView = (() => {
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     UI.showToast('Копия скачана');
   }
-  function importData(file) {
+    function importData(file) {
     const reader = new FileReader(); reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target.result); if (!json.months) throw new Error('Неверный формат файла');
         const currentDb = Storage.read(); Object.assign(currentDb.months, json.months); Storage.write(currentDb);
+        
         UI.showToast('Копия загружена — данные восстановлены');
-        History.render();
+        
+        // ИСПРАВЛЕНИЕ БАГА: Мягко перезагружаем страницу через 1 секунду,
+        // чтобы обновить UI всех модулей (Бюджет, Календарь, Расчеты)
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+
       } catch (err) { UI.showToast('Ошибка: ' + err.message, 'err'); }
     }; reader.readAsText(file);
   }
