@@ -623,26 +623,35 @@ const CalendarView = (() => {
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     UI.showToast('Копия скачана');
   }
-    function importData(file) {
+      function importData(file) {
     const reader = new FileReader(); reader.onload = (e) => {
       try {
-        const json = JSON.parse(e.target.result); if (!json.months) throw new Error('Неверный формат файла');
-        const currentDb = Storage.read(); Object.assign(currentDb.months, json.months); Storage.write(currentDb);
+        const json = JSON.parse(e.target.result); 
+        if (!json || !json.months) throw new Error('Неверный формат файла: отсутствует структура месяцев');
         
-        UI.showToast('Копия загружена — данные восстановлены');
+        const currentDb = Storage.read(); 
+        if (!currentDb || !currentDb.months) {
+          Storage.write({ months: json.months });
+        } else {
+          Object.assign(currentDb.months, json.months); 
+          Storage.write(currentDb);
+        }
         
-        // ИСПРАВЛЕНИЕ БАГА: Мягко перезагружаем страницу через 1 секунду,
-        // чтобы обновить UI всех модулей (Бюджет, Календарь, Расчеты)
+        UI.showToast('Данные успешно восстановлены! Обновление экрана...', 'info');
+        
+        // Безопасное обновление PWA-страницы без зависания интерфейса
         setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+          window.location.replace(window.location.href);
+        }, 800);
 
-      } catch (err) { UI.showToast('Ошибка: ' + err.message, 'err'); }
-    }; reader.readAsText(file);
+      } catch (err) { 
+        UI.showToast('Ошибка импорта: ' + err.message, 'err'); 
+        console.error('Критическая ошибка при импорте:', err);
+      }
+    }; 
+    reader.onerror = () => { UI.showToast('Ошибка чтения файла', 'err'); };
+    reader.readAsText(file);
   }
-  document.getElementById('btnExport').addEventListener('click', exportData);
-  document.getElementById('fileImport').addEventListener('change', (e) => { if (e.target.files.length > 0) { importData(e.target.files[0]); e.target.value = ''; } });
-
   function init() {
     UI.init(); CalendarView.init(); History.init(); DayEditor.init(() => markDirty()); loadMonth(currentKey);
     $('calcBtn').addEventListener('click', calculate); $('saveBtn').addEventListener('click', saveMonth);
