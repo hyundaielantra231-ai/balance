@@ -617,7 +617,7 @@ const CalendarView = (() => {
     const db = Storage.listEntries(); if (!db.length) { UI.showToast('Нет данных для копирования', 'warn'); return; }
     const backup = { app: 'balance-pwa', version: '2.0', exportedAt: new Date().toISOString(), months: {} };
     
-    // Исправление структуры экспорта: сохраняем вложенность data
+    // Сохраняем структуру с правильной вложенностью data
     db.forEach(entry => { 
       backup.months[entry.key] = {
         data: entry.data,
@@ -640,14 +640,12 @@ const CalendarView = (() => {
         
         const currentDb = Storage.read(); 
         
-        // Исправление структуры импорта: поддерживаем файлы без обёртки data
+        // Поддержка и старых «бажных», и новых правильных файлов
         Object.keys(json.months).forEach(key => {
           const entry = json.months[key];
           if (entry && entry.data) {
-            // Если это новый, правильный формат бэкапа
             currentDb.months[key] = entry;
           } else {
-            // Если это старый формат файла (извлекаем данные напрямую)
             currentDb.months[key] = {
               data: entry,
               savedAt: new Date().toISOString()
@@ -658,7 +656,7 @@ const CalendarView = (() => {
         Storage.write(currentDb);
         UI.showToast('Данные успешно восстановлены! Обновление экрана...', 'info');
         
-        // Безопасная перезагрузка страницы для полной инициализации UI
+        // Безопасное обновление PWA-страницы
         setTimeout(() => {
           window.location.replace(window.location.href);
         }, 800);
@@ -683,10 +681,20 @@ const CalendarView = (() => {
 
   function init() {
     UI.init(); CalendarView.init(); History.init(); DayEditor.init(() => markDirty()); loadMonth(currentKey);
-    \$('calcBtn').addEventListener('click', calculate); \(('saveBtn').addEventListener('click', saveMonth);\)('prevMonth').addEventListener('click', () => shiftMonth(-1)); \(('nextMonth').addEventListener('click', () => shiftMonth(1));\)('tabBudget').addEventListener('click', () => showScreen('budget')); \(('tabCalendar').addEventListener('click', () => showScreen('calendar'));\)('tabHistory').addEventListener('click', () => showScreen('history'));
-    const tick = () => { const d = new Date(); \$('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+    \$('calcBtn').addEventListener('click', calculate); 
+    \(('saveBtn').addEventListener('click', saveMonth);\)('prevMonth').addEventListener('click', () => shiftMonth(-1)); 
+    \(('nextMonth').addEventListener('click', () => shiftMonth(1));\)('tabBudget').addEventListener('click', () => showScreen('budget')); 
+    \(('tabCalendar').addEventListener('click', () => showScreen('calendar'));\)('tabHistory').addEventListener('click', () => showScreen('history'));
+    
+    const tick = () => { 
+      const d = new Date(); 
+      \$('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; 
+    };
     tick(); setInterval(tick, 30000);
-    ['listIncomes', 'listCredits', 'listFamily', 'listUtils', 'listOther'].forEach((id) => { \$(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') calculate(); }); });
+    
+    ['listIncomes', 'listCredits', 'listFamily', 'listUtils', 'listOther'].forEach((id) => { 
+      \$(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') calculate(); }); 
+    });
   }
   document.addEventListener('DOMContentLoaded', init);
 })();
