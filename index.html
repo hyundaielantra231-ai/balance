@@ -675,7 +675,7 @@ const CalendarView = (() => {
     } 
   });
 
-  function init() {
+    function init() {
     UI.init(); CalendarView.init(); History.init(); DayEditor.init(() => markDirty()); loadMonth(currentKey);
     \$('calcBtn').addEventListener('click', calculate); 
     \(('saveBtn').addEventListener('click', saveMonth);\)('prevMonth').addEventListener('click', () => shiftMonth(-1)); 
