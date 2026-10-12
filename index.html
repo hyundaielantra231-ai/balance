@@ -617,7 +617,6 @@ const CalendarView = (() => {
     const db = Storage.listEntries(); if (!db.length) { UI.showToast('Нет данных для копирования', 'warn'); return; }
     const backup = { app: 'balance-pwa', version: '2.0', exportedAt: new Date().toISOString(), months: {} };
     
-    // Сохраняем структуру с правильной вложенностью data
     db.forEach(entry => { 
       backup.months[entry.key] = {
         data: entry.data,
@@ -640,7 +639,6 @@ const CalendarView = (() => {
         
         const currentDb = Storage.read(); 
         
-        // Поддержка и старых «бажных», и новых правильных файлов
         Object.keys(json.months).forEach(key => {
           const entry = json.months[key];
           if (entry && entry.data) {
@@ -656,7 +654,6 @@ const CalendarView = (() => {
         Storage.write(currentDb);
         UI.showToast('Данные успешно восстановлены! Обновление экрана...', 'info');
         
-        // Безопасное обновление PWA-страницы
         setTimeout(() => {
           window.location.replace(window.location.href);
         }, 800);
@@ -670,7 +667,6 @@ const CalendarView = (() => {
     reader.readAsText(file);
   }
 
-  // Навешиваем слушатели событий на кнопки импорта и экспорта
   document.getElementById('btnExport').addEventListener('click', exportData);
   document.getElementById('fileImport').addEventListener('change', (e) => { 
     if (e.target.files.length > 0) { 
